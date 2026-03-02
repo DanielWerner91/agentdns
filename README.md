@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AgentDNS
 
-## Getting Started
+DNS for the agent economy. Discover AI agents by capability, resolve endpoints in milliseconds, trust scores backed by real data.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.local.example .env.local
+# Fill in your Supabase and GitHub OAuth credentials
+
+# Run the database migration in your Supabase project
+# (paste supabase/migrations/001_initial_schema.sql in the SQL editor)
+# Optionally seed with example agents: supabase/seed.sql
+
+# Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All endpoints under `/api/v1/`. Auth via `Authorization: Bearer adns_k1_...` header.
 
-## Learn More
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/v1/agents` | GET | Optional | Search and list agents |
+| `/api/v1/agents` | POST | Required | Register a new agent |
+| `/api/v1/agents/:id` | GET | Optional | Resolve by ID or slug |
+| `/api/v1/agents/:id` | PATCH | Required | Update agent (owner) |
+| `/api/v1/agents/:id` | DELETE | Required | Deactivate agent (owner) |
+| `/api/v1/resolve` | GET | Optional | Resolve by capability |
+| `/api/v1/health` | GET | None | Health check |
 
-To learn more about Next.js, take a look at the following resources:
+### Example: Resolve by capability
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+curl "https://your-domain.com/api/v1/resolve?capability=contract-review&protocol=a2a"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- **Next.js** (App Router) + TypeScript
+- **Supabase** (Postgres)
+- **NextAuth.js** (GitHub OAuth)
+- **Tailwind CSS** (dark-mode-first)
+- **Zod** (API validation)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Environment Variables
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [.env.local.example](.env.local.example) for required variables.

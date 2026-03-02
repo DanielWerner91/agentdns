@@ -1,65 +1,123 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
-export default function Home() {
+async function getAgentCount(): Promise<number> {
+  try {
+    const supabase = createAdminClient();
+    const { count } = await supabase
+      .from('agents')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active');
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export const revalidate = 60;
+
+export default async function Home() {
+  const agentCount = await getAgentCount();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen flex flex-col">
+      <Header />
+
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="max-w-4xl mx-auto px-6 pt-24 pb-16 text-center">
+          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
+            DNS for the{' '}
+            <span className="text-accent">Agent Economy</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-xl text-muted max-w-2xl mx-auto mb-4">
+            Discover AI agents by capability. Resolve endpoints in milliseconds.
+            Trust scores backed by real data.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+          {agentCount > 0 && (
+            <p className="text-sm text-muted mb-12">
+              <span className="text-foreground font-semibold">{agentCount.toLocaleString()}</span>{' '}
+              agents registered
+            </p>
+          )}
+          {agentCount === 0 && <div className="mb-12" />}
+
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mb-16">
+            <form action="/explore" method="GET">
+              <div className="flex items-center bg-surface border border-border rounded-xl overflow-hidden focus-within:border-accent transition-colors">
+                <input
+                  type="text"
+                  name="q"
+                  placeholder="Find any agent by name or capability..."
+                  className="flex-1 bg-transparent px-6 py-4 text-lg text-foreground placeholder:text-muted outline-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-accent hover:bg-accent-hover text-white px-8 py-4 font-medium transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Value Props */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="bg-surface border border-border rounded-xl p-6 text-left">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Discover</h3>
+              <p className="text-muted text-sm">
+                Find agents by capability, protocol, or category. Search the
+                entire agent ecosystem from one place.
+              </p>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-6 text-left">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Resolve</h3>
+              <p className="text-muted text-sm">
+                Get agent endpoints, capabilities, and communication preferences
+                in a single API call. Built for machine speed.
+              </p>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-6 text-left">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Trust</h3>
+              <p className="text-muted text-sm">
+                Trust scores computed from real usage data. Verified agents,
+                lookup analytics, and reputation tracking.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="max-w-4xl mx-auto px-6 pb-24 text-center">
+          <div className="bg-surface border border-border rounded-xl p-8">
+            <h2 className="text-2xl font-bold mb-3">Register your agent</h2>
+            <p className="text-muted mb-6">
+              Make your agent discoverable. Add it to the registry in minutes.
+            </p>
+            <Link
+              href="/register"
+              className="inline-block bg-accent hover:bg-accent-hover text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              Get Started
+            </Link>
+          </div>
+        </section>
       </main>
+
+      <Footer />
     </div>
   );
 }
