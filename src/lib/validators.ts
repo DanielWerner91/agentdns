@@ -65,7 +65,7 @@ export const resolveParamsSchema = z.object({
 
 export const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
-  scopes: z.array(z.enum(['read', 'write', 'admin'])).min(1).default(['read']),
+  scopes: z.array(z.enum(['read', 'write'])).min(1).default(['read']),
 });
 
 export type CreateAgentInput = z.infer<typeof createAgentSchema>;

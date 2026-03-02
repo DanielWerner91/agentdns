@@ -11,6 +11,10 @@ function isUUID(value: string): boolean {
   return UUID_REGEX.test(value);
 }
 
+// Public agent detail fields (excludes owner_id for privacy)
+const AGENT_DETAIL_FIELDS =
+  'id, slug, name, tagline, description, owner_name, owner_url, version, status, capabilities, categories, a2a_endpoint, mcp_server_url, api_endpoint, docs_url, agent_card, protocols, input_formats, output_formats, is_verified, trust_score, total_lookups, pricing_model, pricing_details, tags, metadata, created_at, updated_at';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -32,8 +36,8 @@ export async function GET(
 
   // Look up by UUID or slug
   const query = isUUID(id)
-    ? supabase.from('agents').select('*').eq('id', id).single()
-    : supabase.from('agents').select('*').eq('slug', id).single();
+    ? supabase.from('agents').select(AGENT_DETAIL_FIELDS).eq('id', id).single()
+    : supabase.from('agents').select(AGENT_DETAIL_FIELDS).eq('slug', id).single();
 
   const { data, error } = await query;
 
@@ -138,7 +142,7 @@ export async function PATCH(
     .from('agents')
     .update(parsed.data)
     .eq('id', existing.id)
-    .select()
+    .select(AGENT_DETAIL_FIELDS)
     .single();
 
   if (error) {

@@ -4,6 +4,11 @@ import { validateApiKey } from '@/lib/api-keys';
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
 import { searchParamsSchema, createAgentSchema } from '@/lib/validators';
 
+// Escape PostgREST special characters in user input for safe .or() interpolation
+function sanitizeForPostgrest(input: string): string {
+  return input.replace(/[%_\\,.()"']/g, (ch) => `\\${ch}`);
+}
+
 const AGENT_LIST_FIELDS =
   'id, slug, name, tagline, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at';
 
@@ -40,9 +45,10 @@ export async function GET(request: NextRequest) {
   // Status filter
   query = query.eq('status', status);
 
-  // Full-text search
+  // Full-text search (sanitize to prevent PostgREST filter injection)
   if (q) {
-    query = query.or(`name.ilike.%${q}%,tagline.ilike.%${q}%,description.ilike.%${q}%`);
+    const safeQ = sanitizeForPostgrest(q);
+    query = query.or(`name.ilike.%${safeQ}%,tagline.ilike.%${safeQ}%,description.ilike.%${safeQ}%`);
   }
 
   // Capability filter (comma-separated for OR — match any)
@@ -162,7 +168,7 @@ export async function POST(request: NextRequest) {
       ...parsed.data,
       owner_id: auth.ownerId!,
     })
-    .select()
+    .select(AGENT_LIST_FIELDS)
     .single();
 
   if (error) {

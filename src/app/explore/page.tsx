@@ -21,6 +21,11 @@ interface ExplorePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+// Escape PostgREST special characters in user input
+function sanitizeForPostgrest(input: string): string {
+  return input.replace(/[%_\\,.()"']/g, (ch) => `\\${ch}`);
+}
+
 async function fetchAgents(searchParams: Record<string, string | string[] | undefined>) {
   const supabase = createAdminClient();
 
@@ -40,7 +45,8 @@ async function fetchAgents(searchParams: Record<string, string | string[] | unde
     .eq('status', 'active');
 
   if (q) {
-    query = query.or(`name.ilike.%${q}%,tagline.ilike.%${q}%,description.ilike.%${q}%`);
+    const safeQ = sanitizeForPostgrest(q);
+    query = query.or(`name.ilike.%${safeQ}%,tagline.ilike.%${safeQ}%,description.ilike.%${safeQ}%`);
   }
 
   if (capability) {
