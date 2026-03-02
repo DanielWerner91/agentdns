@@ -1,0 +1,34 @@
+# AgentDNS — Discovery & Resolution for AI Agents
+# https://agentdns-green.vercel.app
+
+User-agent: *
+Allow: /
+
+# Explicitly welcome AI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+# Discovery files
+Allow: /.well-known/agent.json
+Allow: /llms.txt
+Allow: /api/v1/openapi.json
+
+Sitemap: https://agentdns-green.vercel.app/sitemap.xml

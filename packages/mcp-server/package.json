@@ -1,0 +1,28 @@
+{
+  "name": "@agentdns/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for AgentDNS — AI agent discovery and resolution",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "agentdns-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["mcp", "agentdns", "agent-discovery", "a2a", "ai-agents"],
+  "license": "MIT"
+}

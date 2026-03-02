@@ -1,0 +1,108 @@
+# AgentDNS
+
+> DNS for the agent economy. Discover AI agents by capability, resolve endpoints in milliseconds, trust scores backed by real data.
+
+AgentDNS is a public registry for AI agents. It allows agents and humans to discover other agents, resolve their endpoints, and assess trust via real usage data.
+
+## Base URL
+
+https://agentdns-green.vercel.app
+
+## API (v1)
+
+All endpoints are under `/api/v1/`. Authentication is via Bearer token: `Authorization: Bearer adns_k1_...`
+
+### Search Agents
+
+GET /api/v1/agents?q={query}&capability={cap}&category={cat}&protocol={proto}&sort={sort}&page={n}&limit={n}
+
+Returns a paginated list of agents matching the filters. All parameters are optional.
+
+- q: free-text search across name, tagline, description
+- capability: comma-separated capabilities (OR match)
+- category: single category filter
+- protocol: one of a2a, mcp, rest, graphql, websocket
+- sort: relevance (default), trust, lookups, newest
+- page: page number (default 1)
+- limit: results per page (default 20, max 100)
+
+### Resolve by Capability
+
+GET /api/v1/resolve?capability={cap}&protocol={proto}&limit={n}
+
+The primary machine endpoint. Returns agents matching the given capability, ranked by trust score. This is the recommended endpoint for agent-to-agent discovery.
+
+- capability: required, comma-separated for multi-capability match
+- protocol: optional filter (a2a, mcp, rest, graphql, websocket)
+- limit: max results (default 10, max 50)
+
+### Resolve Agent by ID or Slug
+
+GET /api/v1/agents/{id_or_slug}
+
+Returns full agent details including all endpoints, capabilities, trust score, and metadata.
+
+### Register Agent
+
+POST /api/v1/agents (requires API key with write scope)
+
+Body (JSON):
+- slug (required): lowercase alphanumeric with hyphens, 3-80 chars
+- name (required): 1-200 chars
+- tagline: up to 300 chars
+- description: up to 10000 chars
+- capabilities: array of strings (max 50)
+- categories: array of strings (max 20)
+- a2a_endpoint: URL of A2A endpoint
+- mcp_server_url: URL of MCP server
+- api_endpoint: URL of REST API
+- docs_url: URL of documentation
+- agent_card: JSON object (A2A agent card)
+- protocols: array of (a2a, mcp, rest, graphql, websocket)
+- input_formats: array of (text, json, pdf, image, audio)
+- output_formats: array of (text, json, markdown, pdf)
+- pricing_model: one of free, per-task, subscription, usage-based, custom
+- pricing_details: up to 500 chars
+- tags: array of strings (max 50)
+- metadata: JSON object
+
+### Update Agent
+
+PATCH /api/v1/agents/{id_or_slug} (requires API key with write scope, owner only)
+
+Body: any subset of the registration fields.
+
+### Delete Agent (Soft)
+
+DELETE /api/v1/agents/{id_or_slug} (requires API key with write scope, owner only)
+
+Sets agent status to inactive.
+
+### Health Check
+
+GET /api/v1/health
+
+Returns status, agent count, version, and timestamp. No authentication required.
+
+## Machine Discovery
+
+- A2A Agent Card: /.well-known/agent.json
+- OpenAPI 3.0 Spec: /api/v1/openapi.json
+- MCP Server: npx @agentdns/mcp-server
+
+## Authentication
+
+1. Sign in at /dashboard with GitHub
+2. Create an API key with "write" scope
+3. Use header: Authorization: Bearer adns_k1_...
+
+Read operations are public (no key needed, rate limited at 60 req/min).
+Write operations require an API key with write scope (rate limited at 30 req/min).
+Authenticated reads get higher rate limits (600 req/min).
+
+## Optional
+
+- [API Reference](/api/v1/openapi.json): Full OpenAPI 3.0 specification
+- [Agent Card](/.well-known/agent.json): A2A protocol agent discovery card
+- [Explore Agents](/explore): Browse the agent directory
+- [Register](/register): Register a new agent via the web UI
