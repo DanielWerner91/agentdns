@@ -9,6 +9,31 @@ import { Footer } from '@/components/Footer';
 export const metadata: Metadata = { title: 'Analytics — AgentDNS Admin' };
 export const revalidate = 300; // 5 minutes
 
+function BarChart({ values, labels }: { values: number[]; labels: string[] }) {
+  const max = Math.max(...values, 1);
+  const barW = 36;
+  const gap = 6;
+  const totalW = values.length * (barW + gap) - gap;
+  const chartH = 72;
+  return (
+    <svg viewBox={`0 0 ${totalW} ${chartH + 18}`} className="w-full" preserveAspectRatio="none">
+      {values.map((v, i) => {
+        const barH = Math.max(v > 0 ? 4 : 0, Math.round((v / max) * chartH));
+        const x = i * (barW + gap);
+        return (
+          <g key={i}>
+            <rect x={x} y={chartH - barH} width={barW} height={barH} rx={3} fill="rgb(124,58,237)" fillOpacity={0.75} />
+            <text x={x + barW / 2} y={chartH + 13} textAnchor="middle" fontSize={9} fill="#6b7280">{labels[i]}</text>
+            {v > 0 && (
+              <text x={x + barW / 2} y={chartH - barH - 4} textAnchor="middle" fontSize={9} fill="#9ca3af">{v}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 // Set your GitHub user ID here to protect the dashboard
 // Get it from: curl https://api.github.com/users/YOUR_GITHUB_USERNAME
 const ADMIN_GITHUB_IDS = (process.env.ADMIN_GITHUB_IDS ?? '').split(',').filter(Boolean);
@@ -59,6 +84,14 @@ export default async function AnalyticsPage() {
 
   const supabase = createAdminClient();
 
+  // Build last-7-days date range
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split('T')[0];
+  });
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
   // Fetch stats in parallel
   const [
     { count: totalAgents },
@@ -68,6 +101,7 @@ export default async function AnalyticsPage() {
     { data: recentAgents },
     { data: topAgents },
     { data: recentLookups },
+    { data: recentAgentsForChart },
   ] = await Promise.all([
     supabase.from('agents').select('*', { count: 'exact', head: true }),
     supabase.from('agents').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -76,6 +110,7 @@ export default async function AnalyticsPage() {
     supabase.from('agents').select('slug, name, created_at, listing_type').order('created_at', { ascending: false }).limit(10),
     supabase.from('agents').select('slug, name, total_lookups').eq('status', 'active').order('total_lookups', { ascending: false }).limit(10),
     supabase.from('lookup_log').select('query_type, created_at').order('created_at', { ascending: false }).limit(200),
+    supabase.from('agents').select('created_at').gte('created_at', sevenDaysAgo),
   ]);
 
   // Count lookups by type
@@ -90,6 +125,19 @@ export default async function AnalyticsPage() {
   const thisWeekCount = (recentAgents ?? []).filter(
     (a) => new Date(a.created_at) > oneWeekAgo
   ).length;
+
+  // Daily registration chart data
+  const regByDay: Record<string, number> = {};
+  for (const day of last7Days) regByDay[day] = 0;
+  for (const a of recentAgentsForChart ?? []) {
+    const day = a.created_at.split('T')[0];
+    if (day in regByDay) regByDay[day]++;
+  }
+  const chartValues = last7Days.map((d) => regByDay[d]);
+  const chartLabels = last7Days.map((d) => {
+    const [, m, dd] = d.split('-');
+    return `${parseInt(m)}/${parseInt(dd)}`;
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -115,11 +163,13 @@ export default async function AnalyticsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* This week */}
+          {/* Registrations chart */}
           <div className="bg-surface border border-border rounded-xl p-5">
-            <h2 className="text-sm font-semibold text-muted uppercase tracking-wider mb-4">This Week</h2>
-            <div className="text-4xl font-bold mb-1">{thisWeekCount}</div>
-            <div className="text-sm text-muted">new registrations</div>
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Registrations (7 days)</h2>
+              <span className="text-2xl font-bold">{thisWeekCount}</span>
+            </div>
+            <BarChart values={chartValues} labels={chartLabels} />
           </div>
 
           {/* Lookup types */}

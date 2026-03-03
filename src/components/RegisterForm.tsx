@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const STEPS = ['Basic Info', 'Capabilities', 'Endpoints', 'Communication', 'Pricing', 'Review'];
 
@@ -53,6 +54,9 @@ export function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
   const [capSuggestions, setCapSuggestions] = useState<string[]>([]);
+  const [quickMode, setQuickMode] = useState(false);
+  const [quickCapability, setQuickCapability] = useState('');
+  const [quickEndpoint, setQuickEndpoint] = useState('');
 
   if (status === 'loading') return <div className="text-center py-16 text-muted">Loading...</div>;
 
@@ -140,7 +144,10 @@ export function RegisterForm() {
   const handleSubmit = async () => {
     setError(''); setSubmitting(true);
     try {
-      const capabilities = form.capabilities.split(',').map((c) => c.trim()).filter(Boolean);
+      // In quick mode, merge quick fields into form state before submitting
+      const capabilities = (quickMode ? quickCapability : form.capabilities)
+        .split(',').map((c) => c.trim()).filter(Boolean);
+      const endpoint = quickMode ? quickEndpoint : '';
       const tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean);
       let agentCard: Record<string,unknown>|undefined;
       if (form.agent_card_json.trim()) {
@@ -156,7 +163,8 @@ export function RegisterForm() {
       if (form.description) payload.description = form.description;
       if (form.a2a_endpoint) payload.a2a_endpoint = form.a2a_endpoint;
       if (form.mcp_server_url) payload.mcp_server_url = form.mcp_server_url;
-      if (form.api_endpoint) payload.api_endpoint = form.api_endpoint;
+      if (endpoint) payload.api_endpoint = endpoint;
+      else if (form.api_endpoint) payload.api_endpoint = form.api_endpoint;
       if (form.docs_url) payload.docs_url = form.docs_url;
       if (form.pricing_model) payload.pricing_model = form.pricing_model;
       if (form.pricing_details) payload.pricing_details = form.pricing_details;
@@ -172,27 +180,51 @@ export function RegisterForm() {
   };
 
   const canProceed = () => step === 0 ? form.name.length >= 1 && form.slug.length >= 3 : true;
+  const canQuickSubmit = form.name.length >= 1 && form.slug.length >= 3;
 
   const inp = "w-full bg-surface border border-border rounded-lg px-4 py-3 text-foreground placeholder:text-muted outline-none focus:border-accent";
 
   return (
     <div>
-      {/* Step indicators */}
-      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
-        {STEPS.map((label, i) => (
-          <button key={label} onClick={() => i < step && setStep(i)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-              i===step ? 'bg-accent text-white' : i<step ? 'bg-accent/10 text-accent cursor-pointer' : 'bg-surface text-muted'}`}>
-            <span className="w-5 h-5 rounded-full border flex items-center justify-center text-[10px]">{i<step?'✓':i+1}</span>
-            {label}
+      {/* GitHub user banner */}
+      <div className="flex items-center justify-between mb-6 p-3 bg-surface border border-border rounded-lg">
+        <div className="flex items-center gap-3">
+          {session.user?.image && (
+            <Image
+              src={session.user.image}
+              alt={session.user.name ?? 'User'}
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
+          )}
+          <div>
+            <p className="text-sm font-medium">{session.user?.name}</p>
+            <p className="text-xs text-muted">Registering as verified owner</p>
+          </div>
+        </div>
+        {/* Quick / Full toggle */}
+        <div className="flex items-center gap-1 bg-background border border-border rounded-lg p-1">
+          <button
+            onClick={() => setQuickMode(false)}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${!quickMode ? 'bg-accent text-white' : 'text-muted hover:text-foreground'}`}
+          >
+            Full Form
           </button>
-        ))}
+          <button
+            onClick={() => setQuickMode(true)}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${quickMode ? 'bg-accent text-white' : 'text-muted hover:text-foreground'}`}
+          >
+            Quick
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {step === 0 && (<>
-          <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 text-sm">
-            <strong>Quick Register:</strong> Only name and slug are required. Add more details later from your dashboard.
+      {quickMode ? (
+        /* ── Quick Register mode ── */
+        <div className="space-y-5">
+          <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 text-sm text-muted">
+            3 fields and you&apos;re done. Add more details anytime from your dashboard.
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Agent Name *</label>
@@ -202,131 +234,180 @@ export function RegisterForm() {
           <div>
             <label className="block text-sm font-medium mb-2">Slug *</label>
             <div className="flex items-center bg-surface border border-border rounded-lg overflow-hidden focus-within:border-accent">
-              <span className="px-4 text-muted text-sm">agent-dns.tech/agent/</span>
+              <span className="px-4 text-muted text-sm shrink-0">agent-dns.tech/agent/</span>
               <input type="text" value={form.slug} placeholder="my-amazing-agent"
                 className="flex-1 bg-transparent px-2 py-3 text-foreground placeholder:text-muted outline-none font-mono text-sm"
                 onChange={(e) => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,''))} />
             </div>
           </div>
-          <div><label className="block text-sm font-medium mb-2">Tagline</label>
-            <input type="text" value={form.tagline} maxLength={300} placeholder="One-line description" className={inp} onChange={(e) => set('tagline', e.target.value)} /></div>
-          <div><label className="block text-sm font-medium mb-2">Description</label>
-            <textarea value={form.description} rows={5} placeholder="Full description (markdown supported)" className={inp + ' resize-y'} onChange={(e) => set('description', e.target.value)} /></div>
-        </>)}
-
-        {step === 1 && (<>
-          <div className="relative">
-            <label className="block text-sm font-medium mb-2">Capabilities</label>
-            <p className="text-xs text-muted mb-2">Comma-separated capability tags. These power search and resolution.</p>
-            <input type="text" value={form.capabilities} placeholder="document-analysis, summarization, translation" className={inp}
-              onChange={(e) => handleCapInput(e.target.value)}
-              onBlur={() => setTimeout(() => setCapSuggestions([]), 200)} />
-            {capSuggestions.length > 0 && (
-              <div className="absolute z-10 left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-lg overflow-hidden">
-                {capSuggestions.map((s) => (
-                  <button key={s} type="button" onMouseDown={() => addCap(s)}
-                    className="w-full text-left px-4 py-2.5 text-sm text-muted hover:text-foreground hover:bg-background transition-colors">{s}</button>
-                ))}
-              </div>
-            )}
-            {form.capabilities && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {form.capabilities.split(',').map((c)=>c.trim()).filter(Boolean).map((cap)=>(
-                  <span key={cap} className="px-2 py-0.5 rounded-md bg-accent/10 text-accent text-xs">{cap}</span>
-                ))}
-              </div>
-            )}
+          <div>
+            <label className="block text-sm font-medium mb-2">Primary Capability</label>
+            <input type="text" value={quickCapability} placeholder="e.g. code-generation" className={inp}
+              onChange={(e) => setQuickCapability(e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Categories</label>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORY_OPTIONS.map((cat) => (
-                <button key={cat} type="button" onClick={() => toggle('categories', cat)}
-                  className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${form.categories.includes(cat) ? 'bg-accent text-white' : 'bg-surface border border-border text-muted hover:text-foreground'}`}>{cat}</button>
-              ))}
-            </div>
+            <label className="block text-sm font-medium mb-2">Endpoint URL <span className="text-muted font-normal">(optional)</span></label>
+            <input type="url" value={quickEndpoint} placeholder="https://your-agent.example.com/api" className={`${inp} font-mono text-sm`}
+              onChange={(e) => setQuickEndpoint(e.target.value)} />
           </div>
-          <div><label className="block text-sm font-medium mb-2">Tags</label>
-            <input type="text" value={form.tags} placeholder="ai, nlp, fast, production-ready" className={inp} onChange={(e) => set('tags', e.target.value)} /></div>
-        </>)}
-
-        {step === 2 && (<>
-          {(['a2a_endpoint','mcp_server_url','api_endpoint','docs_url'] as const).map((f) => (
-            <div key={f}>
-              <label className="block text-sm font-medium mb-2">
-                {f==='a2a_endpoint'?'A2A Endpoint':f==='mcp_server_url'?'MCP Server URL':f==='api_endpoint'?'REST API Endpoint':'Documentation URL'}
-              </label>
-              <input type="url" value={form[f]} className={inp+' font-mono text-sm'}
-                placeholder={f==='a2a_endpoint'?'https://your-agent.example.com/.well-known/agent.json':f==='mcp_server_url'?'https://your-mcp-server.example.com':f==='api_endpoint'?'https://api.your-agent.example.com/v1':'https://docs.your-agent.example.com'}
-                onChange={(e) => set(f, e.target.value)} />
-            </div>
-          ))}
-          <div><label className="block text-sm font-medium mb-2">A2A Agent Card JSON (optional)</label>
-            <textarea value={form.agent_card_json} rows={4} placeholder='{"name": "...", "description": "..."}' className={inp+' font-mono text-sm resize-y'} onChange={(e) => set('agent_card_json', e.target.value)} /></div>
-        </>)}
-
-        {step === 3 && (<>
-          <div><label className="block text-sm font-medium mb-2">Supported Protocols</label>
-            <div className="flex flex-wrap gap-2">{PROTOCOL_OPTIONS.map((p)=>(
-              <button key={p} type="button" onClick={()=>toggle('protocols',p)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-mono uppercase transition-colors ${form.protocols.includes(p)?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{p}</button>
-            ))}</div></div>
-          <div><label className="block text-sm font-medium mb-2">Input Formats</label>
-            <div className="flex flex-wrap gap-2">{INPUT_FORMAT_OPTIONS.map((f)=>(
-              <button key={f} type="button" onClick={()=>toggle('input_formats',f)}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${form.input_formats.includes(f)?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{f}</button>
-            ))}</div></div>
-          <div><label className="block text-sm font-medium mb-2">Output Formats</label>
-            <div className="flex flex-wrap gap-2">{OUTPUT_FORMAT_OPTIONS.map((f)=>(
-              <button key={f} type="button" onClick={()=>toggle('output_formats',f)}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${form.output_formats.includes(f)?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{f}</button>
-            ))}</div></div>
-        </>)}
-
-        {step === 4 && (<>
-          <div><label className="block text-sm font-medium mb-2">Pricing Model</label>
-            <div className="flex flex-wrap gap-2">{PRICING_OPTIONS.map((m)=>(
-              <button key={m} type="button" onClick={()=>set('pricing_model', form.pricing_model===m?'':m)}
-                className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${form.pricing_model===m?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{m}</button>
-            ))}</div></div>
-          <div><label className="block text-sm font-medium mb-2">Pricing Details</label>
-            <input type="text" value={form.pricing_details} maxLength={500} placeholder="e.g. Free during beta, $0.01 per task" className={inp} onChange={(e) => set('pricing_details', e.target.value)} /></div>
-        </>)}
-
-        {step === 5 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Review your agent</h3>
-            <div className="bg-surface border border-border rounded-xl p-6 space-y-3">
-              <RR label="Name" value={form.name} />
-              <RR label="Slug" value={form.slug} mono />
-              {form.tagline && <RR label="Tagline" value={form.tagline} />}
-              {form.capabilities && <RR label="Capabilities" value={form.capabilities.split(',').map(c=>c.trim()).filter(Boolean).join(', ')} />}
-              {form.categories.length > 0 && <RR label="Categories" value={form.categories.join(', ')} />}
-              {form.protocols.length > 0 && <RR label="Protocols" value={form.protocols.join(', ')} />}
-              {form.a2a_endpoint && <RR label="A2A Endpoint" value={form.a2a_endpoint} mono />}
-              {form.mcp_server_url && <RR label="MCP Server" value={form.mcp_server_url} mono />}
-              {form.api_endpoint && <RR label="REST API" value={form.api_endpoint} mono />}
-              {form.pricing_model && <RR label="Pricing" value={`${form.pricing_model}${form.pricing_details?` — ${form.pricing_details}`:''}`} />}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {error && <div className="mt-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">{error}</div>}
-
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-        <button onClick={() => setStep(Math.max(0, step-1))} disabled={step===0}
-          className="px-4 py-2 text-sm text-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Back</button>
-        {step < STEPS.length-1 ? (
-          <button onClick={() => setStep(step+1)} disabled={!canProceed()}
-            className="px-6 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
-        ) : (
-          <button onClick={handleSubmit} disabled={submitting || !canProceed()}
-            className="px-6 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          {error && <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">{error}</div>}
+          <button onClick={handleSubmit} disabled={submitting || !canQuickSubmit}
+            className="w-full py-3 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             {submitting ? 'Registering...' : 'Register Agent'}
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* ── Full multi-step form ── */
+        <div>
+          {/* Step indicators */}
+          <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
+            {STEPS.map((label, i) => (
+              <button key={label} onClick={() => i < step && setStep(i)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                  i===step ? 'bg-accent text-white' : i<step ? 'bg-accent/10 text-accent cursor-pointer' : 'bg-surface text-muted'}`}>
+                <span className="w-5 h-5 rounded-full border flex items-center justify-center text-[10px]">{i<step?'✓':i+1}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-6">
+            {step === 0 && (<>
+              <div>
+                <label className="block text-sm font-medium mb-2">Agent Name *</label>
+                <input type="text" value={form.name} placeholder="My Amazing Agent" className={inp}
+                  onChange={(e) => { set('name', e.target.value); if (!form.slug || form.slug === autoSlug(form.name)) set('slug', autoSlug(e.target.value)); }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Slug *</label>
+                <div className="flex items-center bg-surface border border-border rounded-lg overflow-hidden focus-within:border-accent">
+                  <span className="px-4 text-muted text-sm">agent-dns.tech/agent/</span>
+                  <input type="text" value={form.slug} placeholder="my-amazing-agent"
+                    className="flex-1 bg-transparent px-2 py-3 text-foreground placeholder:text-muted outline-none font-mono text-sm"
+                    onChange={(e) => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,''))} />
+                </div>
+              </div>
+              <div><label className="block text-sm font-medium mb-2">Tagline</label>
+                <input type="text" value={form.tagline} maxLength={300} placeholder="One-line description" className={inp} onChange={(e) => set('tagline', e.target.value)} /></div>
+              <div><label className="block text-sm font-medium mb-2">Description</label>
+                <textarea value={form.description} rows={5} placeholder="Full description (markdown supported)" className={inp + ' resize-y'} onChange={(e) => set('description', e.target.value)} /></div>
+            </>)}
+
+            {step === 1 && (<>
+              <div className="relative">
+                <label className="block text-sm font-medium mb-2">Capabilities</label>
+                <p className="text-xs text-muted mb-2">Comma-separated capability tags. These power search and resolution.</p>
+                <input type="text" value={form.capabilities} placeholder="document-analysis, summarization, translation" className={inp}
+                  onChange={(e) => handleCapInput(e.target.value)}
+                  onBlur={() => setTimeout(() => setCapSuggestions([]), 200)} />
+                {capSuggestions.length > 0 && (
+                  <div className="absolute z-10 left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-lg overflow-hidden">
+                    {capSuggestions.map((s) => (
+                      <button key={s} type="button" onMouseDown={() => addCap(s)}
+                        className="w-full text-left px-4 py-2.5 text-sm text-muted hover:text-foreground hover:bg-background transition-colors">{s}</button>
+                    ))}
+                  </div>
+                )}
+                {form.capabilities && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {form.capabilities.split(',').map((c)=>c.trim()).filter(Boolean).map((cap)=>(
+                      <span key={cap} className="px-2 py-0.5 rounded-md bg-accent/10 text-accent text-xs">{cap}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Categories</label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <button key={cat} type="button" onClick={() => toggle('categories', cat)}
+                      className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${form.categories.includes(cat) ? 'bg-accent text-white' : 'bg-surface border border-border text-muted hover:text-foreground'}`}>{cat}</button>
+                  ))}
+                </div>
+              </div>
+              <div><label className="block text-sm font-medium mb-2">Tags</label>
+                <input type="text" value={form.tags} placeholder="ai, nlp, fast, production-ready" className={inp} onChange={(e) => set('tags', e.target.value)} /></div>
+            </>)}
+
+            {step === 2 && (<>
+              {(['a2a_endpoint','mcp_server_url','api_endpoint','docs_url'] as const).map((f) => (
+                <div key={f}>
+                  <label className="block text-sm font-medium mb-2">
+                    {f==='a2a_endpoint'?'A2A Endpoint':f==='mcp_server_url'?'MCP Server URL':f==='api_endpoint'?'REST API Endpoint':'Documentation URL'}
+                  </label>
+                  <input type="url" value={form[f]} className={inp+' font-mono text-sm'}
+                    placeholder={f==='a2a_endpoint'?'https://your-agent.example.com/.well-known/agent.json':f==='mcp_server_url'?'https://your-mcp-server.example.com':f==='api_endpoint'?'https://api.your-agent.example.com/v1':'https://docs.your-agent.example.com'}
+                    onChange={(e) => set(f, e.target.value)} />
+                </div>
+              ))}
+              <div><label className="block text-sm font-medium mb-2">A2A Agent Card JSON (optional)</label>
+                <textarea value={form.agent_card_json} rows={4} placeholder='{"name": "...", "description": "..."}' className={inp+' font-mono text-sm resize-y'} onChange={(e) => set('agent_card_json', e.target.value)} /></div>
+            </>)}
+
+            {step === 3 && (<>
+              <div><label className="block text-sm font-medium mb-2">Supported Protocols</label>
+                <div className="flex flex-wrap gap-2">{PROTOCOL_OPTIONS.map((p)=>(
+                  <button key={p} type="button" onClick={()=>toggle('protocols',p)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-mono uppercase transition-colors ${form.protocols.includes(p)?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{p}</button>
+                ))}</div></div>
+              <div><label className="block text-sm font-medium mb-2">Input Formats</label>
+                <div className="flex flex-wrap gap-2">{INPUT_FORMAT_OPTIONS.map((f)=>(
+                  <button key={f} type="button" onClick={()=>toggle('input_formats',f)}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${form.input_formats.includes(f)?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{f}</button>
+                ))}</div></div>
+              <div><label className="block text-sm font-medium mb-2">Output Formats</label>
+                <div className="flex flex-wrap gap-2">{OUTPUT_FORMAT_OPTIONS.map((f)=>(
+                  <button key={f} type="button" onClick={()=>toggle('output_formats',f)}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${form.output_formats.includes(f)?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{f}</button>
+                ))}</div></div>
+            </>)}
+
+            {step === 4 && (<>
+              <div><label className="block text-sm font-medium mb-2">Pricing Model</label>
+                <div className="flex flex-wrap gap-2">{PRICING_OPTIONS.map((m)=>(
+                  <button key={m} type="button" onClick={()=>set('pricing_model', form.pricing_model===m?'':m)}
+                    className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${form.pricing_model===m?'bg-accent text-white':'bg-surface border border-border text-muted hover:text-foreground'}`}>{m}</button>
+                ))}</div></div>
+              <div><label className="block text-sm font-medium mb-2">Pricing Details</label>
+                <input type="text" value={form.pricing_details} maxLength={500} placeholder="e.g. Free during beta, $0.01 per task" className={inp} onChange={(e) => set('pricing_details', e.target.value)} /></div>
+            </>)}
+
+            {step === 5 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Review your agent</h3>
+                <div className="bg-surface border border-border rounded-xl p-6 space-y-3">
+                  <RR label="Name" value={form.name} />
+                  <RR label="Slug" value={form.slug} mono />
+                  {form.tagline && <RR label="Tagline" value={form.tagline} />}
+                  {form.capabilities && <RR label="Capabilities" value={form.capabilities.split(',').map(c=>c.trim()).filter(Boolean).join(', ')} />}
+                  {form.categories.length > 0 && <RR label="Categories" value={form.categories.join(', ')} />}
+                  {form.protocols.length > 0 && <RR label="Protocols" value={form.protocols.join(', ')} />}
+                  {form.a2a_endpoint && <RR label="A2A Endpoint" value={form.a2a_endpoint} mono />}
+                  {form.mcp_server_url && <RR label="MCP Server" value={form.mcp_server_url} mono />}
+                  {form.api_endpoint && <RR label="REST API" value={form.api_endpoint} mono />}
+                  {form.pricing_model && <RR label="Pricing" value={`${form.pricing_model}${form.pricing_details?` — ${form.pricing_details}`:''}`} />}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {error && <div className="mt-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">{error}</div>}
+
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+            <button onClick={() => setStep(Math.max(0, step-1))} disabled={step===0}
+              className="px-4 py-2 text-sm text-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Back</button>
+            {step < STEPS.length-1 ? (
+              <button onClick={() => setStep(step+1)} disabled={!canProceed()}
+                className="px-6 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
+            ) : (
+              <button onClick={handleSubmit} disabled={submitting || !canProceed()}
+                className="px-6 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {submitting ? 'Registering...' : 'Register Agent'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
