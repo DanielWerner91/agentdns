@@ -9,6 +9,8 @@ interface AgentCardProps {
 }
 
 export function AgentCard({ agent }: AgentCardProps) {
+  const isCommunity = agent.listing_type === 'community';
+
   return (
     <Link
       href={`/agent/${agent.slug}`}
@@ -21,6 +23,11 @@ export function AgentCard({ agent }: AgentCardProps) {
               {agent.name}
             </h3>
             {agent.is_verified && <VerifiedBadge />}
+            {isCommunity && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-hover text-muted border border-border shrink-0">
+                Community
+              </span>
+            )}
           </div>
           {agent.tagline && (
             <p className="text-sm text-muted line-clamp-2">{agent.tagline}</p>

@@ -9,6 +9,7 @@ export interface Agent {
   owner_url: string | null;
   version: string;
   status: 'active' | 'inactive' | 'deprecated' | 'suspended';
+  listing_type: 'verified' | 'community';
   capabilities: string[];
   categories: string[];
   a2a_endpoint: string | null;
@@ -35,6 +36,7 @@ export interface AgentListItem {
   slug: string;
   name: string;
   tagline: string | null;
+  listing_type: 'verified' | 'community';
   capabilities: string[];
   categories: string[];
   protocols: string[];
@@ -102,4 +104,13 @@ export interface ResolveResponse {
   matches: ResolveMatch[];
   query: Record<string, string>;
   total: number;
+}
+
+export interface BlogPost {
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+  readingTime: string;
+  content: string; // HTML string
 }

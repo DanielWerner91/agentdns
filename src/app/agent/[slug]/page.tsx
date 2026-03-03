@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -9,6 +11,7 @@ import { ProtocolBadge } from '@/components/ProtocolBadge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { CopyButton } from '@/components/CopyButton';
 import { JsonViewer } from '@/components/JsonViewer';
+import { ClaimButton } from '@/components/ClaimButton';
 import type { Agent } from '@/lib/types';
 
 export async function generateMetadata({
@@ -31,6 +34,11 @@ export async function generateMetadata({
   return {
     title: `${data.name} — AgentDNS`,
     description: data.tagline ?? `${data.name} on AgentDNS`,
+    openGraph: {
+      title: `${data.name} — AgentDNS`,
+      description: data.tagline ?? `${data.name} on AgentDNS`,
+      type: 'website',
+    },
   };
 }
 
@@ -38,7 +46,7 @@ async function getAgent(slug: string): Promise<Agent | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('agents')
-    .select('id, slug, name, tagline, description, owner_name, owner_url, version, status, capabilities, categories, a2a_endpoint, mcp_server_url, api_endpoint, docs_url, agent_card, protocols, input_formats, output_formats, is_verified, trust_score, total_lookups, pricing_model, pricing_details, tags, metadata, created_at, updated_at')
+    .select('id, slug, name, tagline, description, owner_id, owner_name, owner_url, version, status, listing_type, capabilities, categories, a2a_endpoint, mcp_server_url, api_endpoint, docs_url, agent_card, protocols, input_formats, output_formats, is_verified, trust_score, total_lookups, pricing_model, pricing_details, tags, metadata, created_at, updated_at')
     .eq('slug', slug)
     .single();
 
@@ -56,13 +64,18 @@ export default async function AgentProfilePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const agent = await getAgent(slug);
+  const [agent, session] = await Promise.all([
+    getAgent(slug),
+    getServerSession(authOptions),
+  ]);
 
   if (!agent) {
     notFound();
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? 'https://agentdns.vercel.app';
+  const isCommunity = agent.listing_type === 'community';
+  const isAuthenticated = !!session?.user?.id;
+  const baseUrl = process.env.NEXTAUTH_URL ?? 'https://agent-dns.tech';
   const curlCommand = `curl "${baseUrl}/api/v1/agents/${agent.slug}"`;
 
   return (
@@ -83,6 +96,12 @@ export default async function AgentProfilePage({
             <div className="flex items-center gap-2 mb-2">
               <h1 className="text-3xl font-bold truncate">{agent.name}</h1>
               {agent.is_verified && <VerifiedBadge className="w-6 h-6" />}
+              {isCommunity && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-surface border border-border text-muted shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  Community Listed
+                </span>
+              )}
             </div>
             {agent.tagline && (
               <p className="text-lg text-muted mb-3">{agent.tagline}</p>
@@ -269,8 +288,14 @@ export default async function AgentProfilePage({
               </div>
             )}
 
-            {/* Owner */}
-            {(agent.owner_name || agent.owner_url) && (
+            {/* Owner or Claim */}
+            {isCommunity ? (
+              <ClaimButton
+                agentId={agent.id}
+                agentName={agent.name}
+                isAuthenticated={isAuthenticated}
+              />
+            ) : (agent.owner_name || agent.owner_url) && (
               <div className="bg-surface border border-border rounded-xl p-5">
                 <p className="text-xs text-muted uppercase tracking-wider mb-2">Owner</p>
                 {agent.owner_url && /^https?:\/\//i.test(agent.owner_url) ? (

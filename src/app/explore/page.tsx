@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 const AGENT_LIST_FIELDS =
-  'id, slug, name, tagline, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at';
+  'id, slug, name, tagline, listing_type, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at';
 
 interface ExplorePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

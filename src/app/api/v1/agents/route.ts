@@ -10,7 +10,7 @@ function sanitizeForPostgrest(input: string): string {
 }
 
 const AGENT_LIST_FIELDS =
-  'id, slug, name, tagline, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at';
+  'id, slug, name, tagline, listing_type, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at';
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
