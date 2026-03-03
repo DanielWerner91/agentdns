@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 const STEPS = ['Basic Info', 'Capabilities', 'Endpoints', 'Communication', 'Pricing', 'Review'];
@@ -48,6 +48,7 @@ const init: FormData = {
 export function RegisterForm() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(init);
   const [error, setError] = useState('');
@@ -57,6 +58,30 @@ export function RegisterForm() {
   const [quickMode, setQuickMode] = useState(false);
   const [quickCapability, setQuickCapability] = useState('');
   const [quickEndpoint, setQuickEndpoint] = useState('');
+
+  // Load prefill from sessionStorage when redirected from /import
+  useEffect(() => {
+    if (searchParams.get('prefill') !== '1') return;
+    try {
+      const raw = sessionStorage.getItem('agentdns_prefill');
+      if (!raw) return;
+      const p = JSON.parse(raw) as Partial<FormData & { capabilities: string }>;
+      sessionStorage.removeItem('agentdns_prefill');
+      setForm(prev => ({
+        ...prev,
+        name: p.name ?? prev.name,
+        slug: p.slug ?? prev.slug,
+        tagline: p.tagline ?? prev.tagline,
+        description: p.description ?? prev.description,
+        capabilities: p.capabilities ?? prev.capabilities,
+        protocols: p.protocols ?? prev.protocols,
+        a2a_endpoint: p.a2a_endpoint ?? prev.a2a_endpoint,
+        mcp_server_url: p.mcp_server_url ?? prev.mcp_server_url,
+        api_endpoint: p.api_endpoint ?? prev.api_endpoint,
+        docs_url: p.docs_url ?? prev.docs_url,
+      }));
+    } catch { /* ignore */ }
+  }, [searchParams]);
 
   if (status === 'loading') return <div className="text-center py-16 text-muted">Loading...</div>;
 

@@ -123,7 +123,7 @@ async function run() {
       categories,
       protocols: ['mcp'],
       mcp_server_url: null as string | null,
-      docs_url: entry.url,
+      docs_url: entry.url as string | null,
       listing_type: 'community',
       owner_id: 'community',
       owner_name: 'AgentDNS Community',

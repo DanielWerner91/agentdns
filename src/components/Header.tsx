@@ -11,6 +11,8 @@ export function Header() {
           <Link href="/explore" className="text-muted hover:text-foreground transition-colors text-sm">Explore</Link>
           <Link href="/docs" className="text-muted hover:text-foreground transition-colors text-sm">API Docs</Link>
           <Link href="/blog" className="text-muted hover:text-foreground transition-colors text-sm">Blog</Link>
+          <Link href="/stats" className="text-muted hover:text-foreground transition-colors text-sm">Stats</Link>
+          <Link href="/import" className="text-muted hover:text-foreground transition-colors text-sm">Import</Link>
           <Link href="/dashboard" className="text-muted hover:text-foreground transition-colors text-sm">Dashboard</Link>
           <Link href="/register" className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Register Agent</Link>
         </nav>
