@@ -5,6 +5,50 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { AgentDNSClient } from './client.js';
 
+// Allowed query parameter keys per tool (whitelist)
+const SEARCH_PARAMS = new Set([
+  'q', 'category', 'protocol', 'capability', 'verified', 'sort', 'order', 'limit', 'offset', 'status', 'page',
+]);
+const RESOLVE_PARAMS = new Set(['capability', 'protocol', 'min_trust', 'limit']);
+const REGISTER_FIELDS = new Set([
+  'name', 'slug', 'description', 'tagline', 'capabilities', 'categories', 'protocols',
+  'a2a_endpoint', 'mcp_server_url', 'api_endpoint', 'docs_url', 'owner_url',
+  'version', 'pricing_model', 'pricing_details', 'tags', 'input_formats', 'output_formats',
+  'agent_card', 'metadata',
+]);
+
+function pickStringParams(args: Record<string, unknown>, allowed: Set<string>): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const [k, v] of Object.entries(args)) {
+    if (allowed.has(k) && v !== undefined && v !== null && v !== '') {
+      params[k] = String(v);
+    }
+  }
+  return params;
+}
+
+function pickFields(args: Record<string, unknown>, allowed: Set<string>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(args)) {
+    if (allowed.has(k) && v !== undefined) {
+      result[k] = v;
+    }
+  }
+  return result;
+}
+
+function sanitizeError(err: unknown): string {
+  if (err instanceof Error) {
+    // Strip anything that looks like a URL or stack trace
+    const msg = err.message;
+    if (/^API request failed with status \d+$/.test(msg)) return msg;
+    if (msg === 'API key required for this operation.') return msg;
+    if (err.name === 'AbortError') return 'Request timed out';
+    return 'An unexpected error occurred';
+  }
+  return 'An unexpected error occurred';
+}
+
 export function registerTools(server: Server, client: AgentDNSClient) {
   server.setRequestHandler(
     ListToolsRequestSchema,
@@ -190,48 +234,46 @@ export function registerTools(server: Server, client: AgentDNSClient) {
       try {
         switch (name) {
           case 'search_agents': {
-            const params: Record<string, string> = {};
-            for (const [k, v] of Object.entries(args || {})) {
-              if (v !== undefined && v !== null && v !== '') {
-                params[k] = String(v);
-              }
-            }
+            const params = pickStringParams(args, SEARCH_PARAMS);
             const result = await client.searchAgents(params);
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
           }
 
           case 'get_agent': {
-            const result = await client.getAgent(String(args.id_or_slug));
+            const idOrSlug = String(args.id_or_slug ?? '');
+            if (!idOrSlug) {
+              return { content: [{ type: 'text', text: 'Error: id_or_slug is required' }], isError: true };
+            }
+            const result = await client.getAgent(idOrSlug);
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
           }
 
           case 'resolve_by_capability': {
-            const params: Record<string, string> = {};
-            for (const [k, v] of Object.entries(args || {})) {
-              if (v !== undefined && v !== null && v !== '') {
-                params[k] = String(v);
-              }
+            const params = pickStringParams(args, RESOLVE_PARAMS);
+            if (!params.capability) {
+              return { content: [{ type: 'text', text: 'Error: capability is required' }], isError: true };
             }
             const result = await client.resolveByCapability(params);
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
           }
 
           case 'register_agent': {
-            const result = await client.registerAgent(args || {});
+            const body = pickFields(args, REGISTER_FIELDS);
+            const result = await client.registerAgent(body);
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
           }
 
           case 'list_categories': {
-            const result = await client.searchAgents({});
-            // Extract unique categories from all agents
-            const agents = (result as any)?.data ?? (result as any) ?? [];
-            const catCounts: Record<string, number> = {};
+            const result = await client.searchAgents({ limit: '100' });
+            const data = result as { agents?: Array<{ categories?: string[] }> };
+            const agents = data?.agents ?? [];
+            const catCounts = new Map<string, number>();
             for (const agent of Array.isArray(agents) ? agents : []) {
               for (const cat of agent.categories ?? []) {
-                catCounts[cat] = (catCounts[cat] || 0) + 1;
+                catCounts.set(cat, (catCounts.get(cat) || 0) + 1);
               }
             }
-            const categories = Object.entries(catCounts)
+            const categories = [...catCounts.entries()]
               .map(([name, count]) => ({ name, count }))
               .sort((a, b) => b.count - a.count);
             return {
@@ -240,10 +282,7 @@ export function registerTools(server: Server, client: AgentDNSClient) {
           }
 
           case 'get_agent_card': {
-            const res = await fetch(
-              `${client.baseUrl}/.well-known/agent.json`
-            );
-            const card = await res.json();
+            const card = await client.getAgentCard();
             return { content: [{ type: 'text', text: JSON.stringify(card, null, 2) }] };
           }
 
@@ -253,9 +292,9 @@ export function registerTools(server: Server, client: AgentDNSClient) {
               isError: true,
             };
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
-          content: [{ type: 'text', text: `Error: ${err.message}` }],
+          content: [{ type: 'text', text: `Error: ${sanitizeError(err)}` }],
           isError: true,
         };
       }

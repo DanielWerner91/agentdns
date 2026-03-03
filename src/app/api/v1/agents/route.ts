@@ -13,7 +13,7 @@ const AGENT_LIST_FIELDS =
   'id, slug, name, tagline, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at';
 
 export async function GET(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
+  const ip = request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const auth = await validateApiKey(request.headers.get('authorization'));
   const tier = auth.valid ? 'authenticated' : 'public';
   const rateLimit = checkRateLimit(auth.valid ? auth.keyPrefix! : ip, tier);
@@ -101,15 +101,14 @@ export async function GET(request: NextRequest) {
 
   // Log the search query
   const logClient = createAdminClient();
-  logClient
+  void logClient
     .from('lookup_log')
     .insert({
       query_type: 'search',
       query_params: rawParams,
       requester_api_key_prefix: auth.keyPrefix ?? null,
       requester_ip: ip,
-    })
-    .then(() => {});
+    });
 
   return NextResponse.json(
     { agents: data, total: count ?? 0, page, limit },
@@ -118,7 +117,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
+  const ip = request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const auth = await validateApiKey(request.headers.get('authorization'));
 
   if (!auth.valid) {
@@ -128,7 +127,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!auth.scopes?.includes('write') && !auth.scopes?.includes('admin')) {
+  if (!auth.scopes?.includes('write')) {
     return NextResponse.json(
       { error: { code: 'forbidden', message: 'API key requires write scope' } },
       { status: 403 }
@@ -185,7 +184,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Log the registration
-  supabase
+  void supabase
     .from('lookup_log')
     .insert({
       agent_id: data.id,
@@ -193,8 +192,7 @@ export async function POST(request: NextRequest) {
       query_params: { slug: parsed.data.slug },
       requester_api_key_prefix: auth.keyPrefix ?? null,
       requester_ip: ip,
-    })
-    .then(() => {});
+    });
 
   return NextResponse.json(
     { data },

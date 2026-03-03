@@ -1,9 +1,15 @@
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export class AgentDNSClient {
   readonly baseUrl: string;
   private apiKey?: string;
 
   constructor(baseUrl: string, apiKey?: string) {
-    this.baseUrl = baseUrl.replace(/\/$/, '');
+    const url = baseUrl.replace(/\/$/, '');
+    if (!/^https?:\/\//i.test(url)) {
+      throw new Error('AGENTDNS_API_URL must start with http:// or https://');
+    }
+    this.baseUrl = url;
     this.apiKey = apiKey;
   }
 
@@ -12,43 +18,55 @@ export class AgentDNSClient {
     if (this.apiKey) {
       h['Authorization'] = `Bearer ${this.apiKey}`;
     } else if (requireAuth) {
-      throw new Error(
-        'API key required for this operation. Set AGENTDNS_API_KEY environment variable.'
-      );
+      throw new Error('API key required for this operation.');
     }
     return h;
   }
 
+  private async request(url: string, init?: RequestInit): Promise<unknown> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      if (!res.ok) {
+        throw new Error(`API request failed with status ${res.status}`);
+      }
+      return await res.json();
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   async searchAgents(params: Record<string, string>): Promise<unknown> {
     const qs = new URLSearchParams(params).toString();
-    const res = await fetch(`${this.baseUrl}/api/v1/agents?${qs}`, {
+    return this.request(`${this.baseUrl}/api/v1/agents?${qs}`, {
       headers: this.headers(),
     });
-    return res.json();
   }
 
   async getAgent(idOrSlug: string): Promise<unknown> {
-    const res = await fetch(
+    return this.request(
       `${this.baseUrl}/api/v1/agents/${encodeURIComponent(idOrSlug)}`,
       { headers: this.headers() }
     );
-    return res.json();
   }
 
   async resolveByCapability(params: Record<string, string>): Promise<unknown> {
     const qs = new URLSearchParams(params).toString();
-    const res = await fetch(`${this.baseUrl}/api/v1/resolve?${qs}`, {
+    return this.request(`${this.baseUrl}/api/v1/resolve?${qs}`, {
       headers: this.headers(),
     });
-    return res.json();
   }
 
   async registerAgent(body: Record<string, unknown>): Promise<unknown> {
-    const res = await fetch(`${this.baseUrl}/api/v1/agents`, {
+    return this.request(`${this.baseUrl}/api/v1/agents`, {
       method: 'POST',
       headers: this.headers(true),
       body: JSON.stringify(body),
     });
-    return res.json();
+  }
+
+  async getAgentCard(): Promise<unknown> {
+    return this.request(`${this.baseUrl}/.well-known/agent.json`);
   }
 }

@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const httpUrl = z.string().url().max(500).refine(
+  (u) => /^https?:\/\//i.test(u),
+  { message: 'URL must start with http:// or https://' }
+);
+
 export const slugSchema = z
   .string()
   .min(3, 'Slug must be at least 3 characters')
@@ -16,11 +21,15 @@ export const createAgentSchema = z.object({
   description: z.string().max(10000).optional(),
   capabilities: z.array(z.string().max(100)).max(50).default([]),
   categories: z.array(z.string().max(100)).max(20).default([]),
-  a2a_endpoint: z.string().url().max(500).optional(),
-  mcp_server_url: z.string().url().max(500).optional(),
-  api_endpoint: z.string().url().max(500).optional(),
-  docs_url: z.string().url().max(500).optional(),
-  agent_card: z.record(z.string(), z.unknown()).optional(),
+  a2a_endpoint: httpUrl.optional(),
+  mcp_server_url: httpUrl.optional(),
+  api_endpoint: httpUrl.optional(),
+  docs_url: httpUrl.optional(),
+  owner_url: httpUrl.optional(),
+  agent_card: z.record(z.string(), z.unknown()).optional().refine(
+    (v) => !v || JSON.stringify(v).length <= 50000,
+    { message: 'agent_card must be under 50KB' }
+  ),
   protocols: z
     .array(z.enum(['a2a', 'mcp', 'rest', 'graphql', 'websocket']))
     .default([]),
@@ -35,7 +44,10 @@ export const createAgentSchema = z.object({
     .optional(),
   pricing_details: z.string().max(500).optional(),
   tags: z.array(z.string().max(100)).max(50).default([]),
-  metadata: z.record(z.string(), z.unknown()).default({}),
+  metadata: z.record(z.string(), z.unknown()).default({}).refine(
+    (v) => JSON.stringify(v).length <= 50000,
+    { message: 'metadata must be under 50KB' }
+  ),
 });
 
 export const updateAgentSchema = createAgentSchema.partial();

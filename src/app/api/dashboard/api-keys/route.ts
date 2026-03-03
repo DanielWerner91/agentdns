@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey } from '@/lib/api-keys';
 import { createApiKeySchema } from '@/lib/validators';
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
+
+const MAX_KEYS_PER_USER = 10;
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -28,7 +31,9 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ data }, {
+    headers: { 'Cache-Control': 'no-store, private' },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -37,6 +42,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: { code: 'unauthorized', message: 'Sign in required' } },
       { status: 401 }
+    );
+  }
+
+  const rateLimit = checkRateLimit(`dashboard:${session.user.id}`, 'write');
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: { code: 'rate_limited', message: 'Too many requests' } },
+      { status: 429, headers: getRateLimitHeaders(rateLimit.remaining, rateLimit.resetAt) }
+    );
+  }
+
+  // Check per-user key count limit
+  const supabaseCheck = createAdminClient();
+  const { count: keyCount } = await supabaseCheck
+    .from('api_keys')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', session.user.id)
+    .eq('is_active', true);
+
+  if (keyCount !== null && keyCount >= MAX_KEYS_PER_USER) {
+    return NextResponse.json(
+      { error: { code: 'limit_exceeded', message: `Maximum ${MAX_KEYS_PER_USER} active API keys per user` } },
+      { status: 403 }
     );
   }
 

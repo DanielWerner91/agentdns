@@ -9,6 +9,12 @@ const API_URL =
   process.env.AGENTDNS_API_URL || 'https://agentdns-green.vercel.app';
 const API_KEY = process.env.AGENTDNS_API_KEY;
 
+if (!API_KEY) {
+  console.error(
+    '[agentdns-mcp] Warning: No API key configured. Write operations (register_agent) will fail.'
+  );
+}
+
 const client = new AgentDNSClient(API_URL, API_KEY);
 
 const server = new Server(

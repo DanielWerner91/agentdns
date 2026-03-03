@@ -38,14 +38,14 @@ async function getAgent(slug: string): Promise<Agent | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('agents')
-    .select('*')
+    .select('id, slug, name, tagline, description, owner_name, owner_url, version, status, capabilities, categories, a2a_endpoint, mcp_server_url, api_endpoint, docs_url, agent_card, protocols, input_formats, output_formats, is_verified, trust_score, total_lookups, pricing_model, pricing_details, tags, metadata, created_at, updated_at')
     .eq('slug', slug)
     .single();
 
   if (error || !data) return null;
 
   // Increment lookups (fire-and-forget)
-  supabase.rpc('increment_lookups', { agent_uuid: data.id }).then(() => {});
+  void supabase.rpc('increment_lookups', { agent_uuid: data.id });
 
   return data as Agent;
 }
@@ -273,7 +273,7 @@ export default async function AgentProfilePage({
             {(agent.owner_name || agent.owner_url) && (
               <div className="bg-surface border border-border rounded-xl p-5">
                 <p className="text-xs text-muted uppercase tracking-wider mb-2">Owner</p>
-                {agent.owner_url ? (
+                {agent.owner_url && /^https?:\/\//i.test(agent.owner_url) ? (
                   <a
                     href={agent.owner_url}
                     target="_blank"
@@ -283,7 +283,7 @@ export default async function AgentProfilePage({
                     {agent.owner_name ?? agent.owner_url}
                   </a>
                 ) : (
-                  <p className="text-sm">{agent.owner_name}</p>
+                  <p className="text-sm">{agent.owner_name ?? agent.owner_url}</p>
                 )}
               </div>
             )}

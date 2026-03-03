@@ -48,11 +48,10 @@ export async function validateApiKey(
   }
 
   // Update last_used_at (fire-and-forget)
-  supabase
+  void supabase
     .from('api_keys')
     .update({ last_used_at: new Date().toISOString() })
-    .eq('key_hash', keyHash)
-    .then(() => {});
+    .eq('key_hash', keyHash);
 
   return {
     valid: true,

@@ -20,7 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
+  const ip = request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const auth = await validateApiKey(request.headers.get('authorization'));
   const tier = auth.valid ? 'authenticated' : 'public';
   const rateLimit = checkRateLimit(auth.valid ? auth.keyPrefix! : ip, tier);
@@ -49,10 +49,10 @@ export async function GET(
   }
 
   // Increment lookups (fire-and-forget)
-  supabase.rpc('increment_lookups', { agent_uuid: data.id }).then(() => {});
+  void supabase.rpc('increment_lookups', { agent_uuid: data.id });
 
   // Log the resolution
-  supabase
+  void supabase
     .from('lookup_log')
     .insert({
       agent_id: data.id,
@@ -60,8 +60,7 @@ export async function GET(
       query_params: { id },
       requester_api_key_prefix: auth.keyPrefix ?? null,
       requester_ip: ip,
-    })
-    .then(() => {});
+    });
 
   return NextResponse.json(
     { data },
@@ -83,7 +82,7 @@ export async function PATCH(
     );
   }
 
-  if (!auth.scopes?.includes('write') && !auth.scopes?.includes('admin')) {
+  if (!auth.scopes?.includes('write')) {
     return NextResponse.json(
       { error: { code: 'forbidden', message: 'API key requires write scope' } },
       { status: 403 }
@@ -178,7 +177,7 @@ export async function DELETE(
     );
   }
 
-  if (!auth.scopes?.includes('write') && !auth.scopes?.includes('admin')) {
+  if (!auth.scopes?.includes('write')) {
     return NextResponse.json(
       { error: { code: 'forbidden', message: 'API key requires write scope' } },
       { status: 403 }

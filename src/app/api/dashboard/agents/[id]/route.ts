@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { updateAgentSchema } from '@/lib/validators';
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
 
 export async function PATCH(
   request: NextRequest,
@@ -14,6 +15,14 @@ export async function PATCH(
     return NextResponse.json(
       { error: { code: 'unauthorized', message: 'Sign in required' } },
       { status: 401 }
+    );
+  }
+
+  const rateLimit = checkRateLimit(`dashboard:${session.user.id}`, 'write');
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: { code: 'rate_limited', message: 'Too many requests' } },
+      { status: 429, headers: getRateLimitHeaders(rateLimit.remaining, rateLimit.resetAt) }
     );
   }
 
@@ -55,7 +64,7 @@ export async function PATCH(
     .from('agents')
     .update(parsed.data)
     .eq('id', id)
-    .select()
+    .select('id, slug, name, tagline, status, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at, updated_at')
     .single();
 
   if (error) {
@@ -84,6 +93,14 @@ export async function DELETE(
     return NextResponse.json(
       { error: { code: 'unauthorized', message: 'Sign in required' } },
       { status: 401 }
+    );
+  }
+
+  const rl = checkRateLimit(`dashboard:${session.user.id}`, 'write');
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: { code: 'rate_limited', message: 'Too many requests' } },
+      { status: 429, headers: getRateLimitHeaders(rl.remaining, rl.resetAt) }
     );
   }
 

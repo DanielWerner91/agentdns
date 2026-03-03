@@ -112,7 +112,7 @@ export function ApiKeyManager() {
           />
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted">Scopes:</span>
-            {['read', 'write', 'admin'].map((scope) => (
+            {['read', 'write'].map((scope) => (
               <button
                 key={scope}
                 onClick={() => toggleScope(scope)}

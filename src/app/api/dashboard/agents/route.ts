@@ -15,7 +15,7 @@ export async function GET() {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('agents')
-    .select('*')
+    .select('id, slug, name, tagline, status, capabilities, categories, protocols, is_verified, trust_score, total_lookups, pricing_model, a2a_endpoint, created_at, updated_at')
     .eq('owner_id', session.user.id)
     .order('created_at', { ascending: false });
 
@@ -26,5 +26,7 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ data }, {
+    headers: { 'Cache-Control': 'no-store, private' },
+  });
 }

@@ -8,7 +8,7 @@ const RESOLVE_FIELDS =
   'id, slug, name, trust_score, a2a_endpoint, mcp_server_url, api_endpoint, pricing_model, capabilities, protocols';
 
 export async function GET(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
+  const ip = request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const auth = await validateApiKey(request.headers.get('authorization'));
   const tier = auth.valid ? 'authenticated' : 'public';
   const rateLimit = checkRateLimit(auth.valid ? auth.keyPrefix! : ip, tier);
@@ -62,20 +62,19 @@ export async function GET(request: NextRequest) {
   // Increment lookups for all matched agents (fire-and-forget)
   if (data && data.length > 0) {
     for (const agent of data) {
-      supabase.rpc('increment_lookups', { agent_uuid: agent.id }).then(() => {});
+      void supabase.rpc('increment_lookups', { agent_uuid: agent.id });
     }
   }
 
   // Log the resolution
-  supabase
+  void supabase
     .from('lookup_log')
     .insert({
       query_type: 'resolve_capability',
       query_params: rawParams,
       requester_api_key_prefix: auth.keyPrefix ?? null,
       requester_ip: ip,
-    })
-    .then(() => {});
+    });
 
   return NextResponse.json(
     {

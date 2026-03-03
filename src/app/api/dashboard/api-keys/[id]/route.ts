@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
 
 export async function DELETE(
   _request: NextRequest,
@@ -13,6 +14,14 @@ export async function DELETE(
     return NextResponse.json(
       { error: { code: 'unauthorized', message: 'Sign in required' } },
       { status: 401 }
+    );
+  }
+
+  const rl = checkRateLimit(`dashboard:${session.user.id}`, 'write');
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: { code: 'rate_limited', message: 'Too many requests' } },
+      { status: 429, headers: getRateLimitHeaders(rl.remaining, rl.resetAt) }
     );
   }
 
