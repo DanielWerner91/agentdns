@@ -101,6 +101,12 @@ body {
   50% { background-position: 200% center; }
 }
 
+/* Grid flow for hero perspective grid */
+@keyframes grid-flow {
+  0% { transform: rotateX(55deg) translateY(-50%); }
+  100% { transform: rotateX(55deg) translateY(calc(-50% + 60px)); }
+}
+
 /* Floating particles keyframe */
 @keyframes float-particle {
   0%, 100% { transform: translateY(0) translateX(0); opacity: 0.4; }
