@@ -82,7 +82,7 @@ async function run() {
   console.log('===================');
 
   // Fetch all existing slugs to deduplicate
-  const { data: existing } = await supabase.from('agents').select('slug');
+  const { data: existing } = await supabase.from('agents').select('slug').limit(20000);
   const existingSlugs = new Set((existing ?? []).map((r: { slug: string }) => r.slug));
   console.log(`Existing agents in DB: ${existingSlugs.size}`);
 

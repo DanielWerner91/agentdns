@@ -4,8 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
 
 const CATEGORIES = [
-  'legal', 'finance', 'content', 'engineering', 'data',
-  'support', 'sales', 'healthcare', 'education', 'security',
+  'data', 'engineering', 'developer-tools', 'infrastructure', 'productivity',
+  'content', 'finance', 'support', 'sales', 'security',
+  'healthcare', 'education', 'legal', 'design-creative',
 ];
 
 const PROTOCOLS = ['a2a', 'mcp', 'rest', 'graphql', 'websocket'];

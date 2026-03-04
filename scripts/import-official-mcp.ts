@@ -65,7 +65,7 @@ async function run() {
   const entries = parseReadme(content);
   console.log(`Parsed ${entries.length} entries`);
 
-  const { data: existing } = await supabase.from('agents').select('slug');
+  const { data: existing } = await supabase.from('agents').select('slug').limit(20000);
   const existingSlugs = new Set((existing ?? []).map((r: { slug: string }) => r.slug));
   console.log(`Existing agents in DB: ${existingSlugs.size}`);
 
