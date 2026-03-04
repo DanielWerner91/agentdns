@@ -1,6 +1,9 @@
 /**
- * Backfill categories for all agents based on their capabilities array
- * and keyword matching in name/tagline/description.
+ * Backfill categories for all agents. Ensures EVERY agent has at least one category.
+ * Three-tier approach:
+ *   1. Map capabilities → categories
+ *   2. Keyword-match name/tagline/description → categories
+ *   3. Fallback based on protocol/source if still empty
  *
  * Usage: npx tsx scripts/backfill-categories.ts
  */
@@ -12,86 +15,113 @@ loadEnv();
 const { url, key } = getSupabaseCredentials();
 const supabase = createClient(url, key);
 
-// Capability tag → category mappings (priority order matters — first match wins per category)
+// ── Tier 1: Capability tag → category mappings ──
 const CAP_TO_CATS: [string[], string[]][] = [
-  // Data & Analytics
   [['database','sql','nosql','vector-search','data-extraction','analytics','bigquery'], ['data']],
   [['web-scraping','web-search','research'], ['data']],
   [['rag'], ['data','engineering']],
-
-  // Engineering (AI/ML, code, dev tools)
   [['ai-ml','llm','orchestration','agent-framework'], ['engineering']],
   [['code-generation','code-review','debugging','testing'], ['engineering']],
   [['nlp','summarization','classification','ocr','document-analysis','translation'], ['engineering']],
   [['monitoring'], ['engineering']],
-
-  // Version control → developer-tools AND engineering
   [['version-control','github','gitlab'], ['developer-tools','engineering']],
-
-  // Developer Tools
   [['browser-automation','webdriver'], ['developer-tools']],
   [['file-management','developer-tools'], ['developer-tools']],
-
-  // Infrastructure / DevOps
   [['infrastructure','devops','deployment','cloud','aws','gcp','azure','cloudflare'], ['infrastructure']],
-
-  // Productivity / Automation
   [['automation','workflow','integration'], ['productivity']],
   [['project-management','issue-tracking','task-management'], ['productivity']],
   [['scheduling','calendar','knowledge-management'], ['productivity']],
   [['caching'], ['infrastructure']],
-
-  // Finance
   [['financial-data','finance','payments','commerce'], ['finance']],
-
-  // Content / Media
   [['image-generation','video','music','voice-synthesis','tts'], ['content']],
   [['computer-vision'], ['content','engineering']],
   [['news'], ['content']],
-
-  // Communication / Support
   [['communication','messaging','email','sms'], ['support']],
-
-  // Sales & CRM
   [['crm','sales'], ['sales']],
   [['social-media'], ['sales','content']],
-
-  // Security
   [['authentication','security'], ['security']],
-
-  // Healthcare
   [['healthcare'], ['healthcare']],
-
-  // Design / Creative
   [['design','ui-ux','3d-modeling','creative'], ['design-creative']],
-
-  // Geolocation → infrastructure/data
   [['geolocation','maps'], ['data']],
 ];
 
-// Keyword → categories for name/tagline/description text
+// ── Tier 2: Keyword → categories for text matching ──
+// Expanded significantly to catch more agents
 const TEXT_RULES: [RegExp, string[]][] = [
+  // Developer tools / Engineering
+  [/\b(code|coding|compiler|ide|editor|linter|formatter|debug|devtool|dev.?tool)\b/i, ['developer-tools']],
+  [/\b(github|gitlab|bitbucket|git\b|repository|commit|pull.?request|ci.?cd)\b/i, ['developer-tools']],
+  [/\b(docker|kubernetes|k8s|container|terraform|ansible|helm|nginx)\b/i, ['infrastructure']],
+  [/\b(aws|gcp|azure|cloud|serverless|lambda|s3|ec2|vercel|netlify|heroku)\b/i, ['infrastructure']],
+  [/\b(api|endpoint|sdk|cli|terminal|command.?line|shell|bash|npm|pip|package)\b/i, ['developer-tools']],
+  [/\b(browser|chrome|firefox|puppeteer|playwright|selenium|scrape|crawl)\b/i, ['developer-tools']],
+  [/\b(test|testing|unit.?test|e2e|cypress|jest|mocha|pytest|spec)\b/i, ['developer-tools']],
+  [/\b(database|sql|postgres|mysql|mongo|redis|supabase|firebase|dynamo)\b/i, ['data']],
+  [/\b(vector|embedding|similarity|qdrant|pinecone|weaviate|chroma|milvus)\b/i, ['data','engineering']],
+  [/\b(search|elastic|solr|algolia|typesense|meilisearch)\b/i, ['data']],
+  [/\b(llm|language.?model|gpt|claude|gemini|llama|mistral|openai|anthropic)\b/i, ['engineering']],
+  [/\b(ai|artificial.?intelligence|machine.?learning|ml|deep.?learning|neural)\b/i, ['engineering']],
+  [/\b(agent|autonomous|multi.?agent|orchestrat|chain|prompt|rag|retrieval)\b/i, ['engineering']],
+  [/\b(nlp|natural.?language|sentiment|tokeniz|parse|ner|text.?analysis)\b/i, ['engineering']],
+  [/\b(transform|convert|format|markdown|json|xml|yaml|csv|pdf)\b/i, ['developer-tools']],
+  [/\b(file|filesystem|directory|upload|download|storage|blob|s3)\b/i, ['developer-tools']],
+  [/\b(log|logging|trace|observ|telemetry|metric|monitor|alert)\b/i, ['infrastructure']],
+  [/\b(auth|oauth|jwt|token|session|identity|password|login|sso|saml)\b/i, ['security']],
+  [/\b(encrypt|decrypt|cipher|hash|sign|certificate|ssl|tls|security|firewall|vulnerability)\b/i, ['security']],
+
+  // Productivity / Automation
+  [/\b(automat|workflow|pipelin|schedule|cron|task|todo|project.?manage)\b/i, ['productivity']],
+  [/\b(calendar|meeting|email|mail|inbox|notification|reminder|note)\b/i, ['productivity']],
+  [/\b(slack|discord|teams|telegram|whatsapp|chat|messag|communicat)\b/i, ['support']],
+  [/\b(notion|obsidian|roam|wiki|knowledge.?base|documentation|doc)\b/i, ['productivity']],
+  [/\b(jira|linear|asana|trello|clickup|monday|basecamp|issue.?track)\b/i, ['productivity']],
+  [/\b(spreadsheet|excel|sheets|table|csv|report|dashboard|analytics)\b/i, ['data']],
+
+  // Content / Creative
+  [/\b(image|photo|picture|visual|camera|vision|ocr|screenshot)\b/i, ['content']],
+  [/\b(video|youtube|vimeo|stream|media|playback|subtitle)\b/i, ['content']],
+  [/\b(audio|music|sound|voice|speech|tts|podcast|spotify)\b/i, ['content']],
+  [/\b(writing|blog|article|content|cms|wordpress|medium|post)\b/i, ['content']],
+  [/\b(design|figma|sketch|canva|ui|ux|prototype|mockup|layout|css)\b/i, ['design-creative']],
+  [/\b(3d|animation|render|blender|unity|game|gaming)\b/i, ['design-creative','content']],
+
+  // Domain-specific
   [/\b(legal|law|contract|compliance|gdpr|attorney|court|regulation)\b/i, ['legal']],
-  [/\b(educat|learn|tutor|course|student|teach|school|quiz|exam)\b/i, ['education']],
-  [/\b(ecommerce|e-commerce|shopify|woocommerce|retail|product.?catalog)\b/i, ['sales','finance']],
-  [/\b(medical|clinical|patient|diagnosis|health|hospital|doctor|ehr|fhir)\b/i, ['healthcare']],
-  [/\b(travel|hotel|flight|booking|airbnb|expedia|trip)\b/i, ['content']],
-  [/\b(music|spotify|playlist|audio|podcast)\b/i, ['content']],
-  [/\b(recipe|food|cook|restaurant|meal)\b/i, ['content']],
-  [/\b(real.?estate|property|mortgage|zillow)\b/i, ['finance']],
-  [/\b(news|article|journalism|blog|rss|feed)\b/i, ['content']],
-  [/\b(game|gaming|unity|unreal|3d|blender)\b/i, ['design-creative','content']],
+  [/\b(educat|learn|tutor|course|student|teach|school|quiz|exam|training)\b/i, ['education']],
+  [/\b(ecommerce|e-commerce|shopify|woocommerce|retail|product.?catalog|store|cart|checkout)\b/i, ['sales','finance']],
+  [/\b(medical|clinical|patient|diagnosis|health|hospital|doctor|ehr|fhir|pharma|drug)\b/i, ['healthcare']],
+  [/\b(finance|financial|banking|trading|invest|stock|crypto|bitcoin|blockchain|payment|stripe|paypal)\b/i, ['finance']],
+  [/\b(travel|hotel|flight|booking|airbnb|trip|tourism)\b/i, ['content']],
+  [/\b(recipe|food|cook|restaurant|meal|nutrition)\b/i, ['content']],
+  [/\b(real.?estate|property|mortgage|zillow|rent|lease)\b/i, ['finance']],
+  [/\b(news|journal|rss|feed|press)\b/i, ['content']],
+  [/\b(crm|salesforce|hubspot|customer|lead|marketing|campaign|seo|ad|advertis)\b/i, ['sales']],
+  [/\b(support|helpdesk|ticket|zendesk|intercom|freshdesk|customer.?service)\b/i, ['support']],
+  [/\b(weather|forecast|climate|temperature)\b/i, ['data']],
+  [/\b(map|location|geo|gps|address|geocod|navigation|route)\b/i, ['data']],
+  [/\b(math|calculat|statistic|scientific|compute|numerical)\b/i, ['engineering']],
 ];
+
+// ── Tier 3: Fallback based on protocol/source ──
+function fallbackCategory(protocols: string[], source: string): string[] {
+  if (protocols.includes('mcp')) return ['developer-tools'];
+  if (source === 'huggingface') return ['engineering'];
+  if (source === 'github-topics') return ['engineering'];
+  if (source === 'awesome-ai-agents') return ['engineering'];
+  return ['developer-tools']; // ultimate fallback
+}
 
 function deriveCategories(agent: {
   capabilities: string[];
   name: string;
   tagline?: string | null;
   description?: string | null;
+  protocols?: string[];
+  source?: string;
 }): string[] {
   const cats = new Set<string>();
 
-  // 1. Map capabilities
+  // Tier 1: Map capabilities
   const capSet = new Set(agent.capabilities ?? []);
   for (const [caps, assignedCats] of CAP_TO_CATS) {
     if (caps.some(c => capSet.has(c))) {
@@ -99,7 +129,7 @@ function deriveCategories(agent: {
     }
   }
 
-  // 2. Keyword-match text
+  // Tier 2: Keyword-match text
   const text = `${agent.name} ${agent.tagline ?? ''} ${agent.description ?? ''}`;
   for (const [pattern, assignedCats] of TEXT_RULES) {
     if (pattern.test(text)) {
@@ -107,14 +137,20 @@ function deriveCategories(agent: {
     }
   }
 
+  // Tier 3: Fallback — ensure every agent gets at least one category
+  if (cats.size === 0) {
+    for (const cat of fallbackCategory(agent.protocols ?? [], agent.source ?? '')) {
+      cats.add(cat);
+    }
+  }
+
   return Array.from(cats);
 }
 
 async function run() {
-  console.log('Category Backfill');
-  console.log('=================');
+  console.log('Category Backfill (full coverage)');
+  console.log('=================================');
 
-  // Fetch all agents (paginate in chunks of 1000)
   let updated = 0;
   let kept = 0;
   let errors = 0;
@@ -124,7 +160,7 @@ async function run() {
   while (true) {
     const { data: agents, error } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, description, capabilities, categories')
+      .select('id, slug, name, tagline, description, capabilities, categories, protocols, source')
       .order('id')
       .range(offset, offset + CHUNK - 1);
 
@@ -139,20 +175,22 @@ async function run() {
         name: string;
         tagline?: string | null;
         description?: string | null;
+        protocols?: string[];
+        source?: string;
       });
 
-      // Skip if new cats would be empty (keep existing) or identical to current
       const existing = (agent.categories ?? []) as string[];
-      if (newCats.length === 0) { kept++; continue; }
 
-      const existingSorted = [...existing].sort().join(',');
-      const newSorted = [...newCats].sort().join(',');
-      if (existingSorted === newSorted) { kept++; continue; }
+      // Always update if empty, or if derived categories are different
+      if (existing.length > 0) {
+        const existingSorted = [...existing].sort().join(',');
+        const newSorted = [...newCats].sort().join(',');
+        if (existingSorted === newSorted) { kept++; continue; }
+      }
 
       batch.push({ id: agent.id as string, categories: newCats });
     }
 
-    // Update in batch using individual updates (Supabase doesn't support bulk conditional update)
     for (const item of batch) {
       const { error: updateError } = await supabase
         .from('agents')
