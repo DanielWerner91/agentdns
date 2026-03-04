@@ -380,6 +380,16 @@ async function run() {
     total += await importGitHubTopic('langchain-agent', existingSlugs, ['engineering']);
     total += await importGitHubTopic('autogen', existingSlugs, ['engineering']);
     total += await importGitHubTopic('crewai', existingSlugs, ['engineering']);
+    // New topics
+    total += await importGitHubTopic('chatbot', existingSlugs, ['support', 'engineering']);
+    total += await importGitHubTopic('rag', existingSlugs, ['data', 'engineering']);
+    total += await importGitHubTopic('multi-agent', existingSlugs, ['engineering']);
+    total += await importGitHubTopic('agentic', existingSlugs, ['engineering']);
+    total += await importGitHubTopic('agent-framework', existingSlugs, ['engineering']);
+    total += await importGitHubTopic('conversational-ai', existingSlugs, ['support', 'engineering']);
+    total += await importGitHubTopic('function-calling', existingSlugs, ['engineering']);
+    total += await importGitHubTopic('langchain', existingSlugs, ['engineering']);
+    total += await importGitHubTopic('llamaindex', existingSlugs, ['data', 'engineering']);
   } else {
     console.log('\nSkipping GitHub topic search (no GITHUB_TOKEN set)');
   }
