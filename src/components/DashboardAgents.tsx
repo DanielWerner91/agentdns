@@ -44,17 +44,22 @@ export function DashboardAgents() {
   };
 
   if (loading) {
-    return <div className="text-muted text-sm">Loading your agents...</div>;
+    return (
+      <div className="flex items-center gap-2 text-muted text-sm py-8">
+        <div className="w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+        Loading your agents...
+      </div>
+    );
   }
 
   if (agents.length === 0) {
     return (
-      <div className="text-center py-12 bg-surface border border-border rounded-xl">
+      <div className="text-center py-12 bg-surface/60 border border-border rounded-xl">
         <h3 className="text-lg font-semibold mb-2">No agents yet</h3>
         <p className="text-muted text-sm mb-4">Register your first agent to get started.</p>
         <Link
           href="/register"
-          className="inline-block bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="inline-block bg-gradient-to-r from-accent to-accent-2 hover:from-accent-hover hover:to-accent-2-hover text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer"
         >
           Register Agent
         </Link>
@@ -67,7 +72,7 @@ export function DashboardAgents() {
       {agents.map((agent) => (
         <div
           key={agent.id}
-          className={`bg-surface border border-border rounded-xl p-5 ${
+          className={`bg-surface/60 border border-border rounded-xl p-5 card-lift glow-border ${
             agent.status !== 'active' ? 'opacity-60' : ''
           }`}
         >
@@ -76,7 +81,7 @@ export function DashboardAgents() {
               <div className="flex items-center gap-2 mb-1">
                 <Link
                   href={`/agent/${agent.slug}`}
-                  className="font-semibold hover:text-accent transition-colors"
+                  className="font-semibold hover:text-accent transition-colors duration-150 cursor-pointer"
                 >
                   {agent.name}
                 </Link>
@@ -107,21 +112,21 @@ export function DashboardAgents() {
               <div className="flex items-center gap-2">
                 <Link
                   href={`/agent/${agent.slug}`}
-                  className="text-xs text-muted hover:text-foreground transition-colors px-2 py-1"
+                  className="text-xs text-muted hover:text-foreground transition-colors duration-150 px-2 py-1 cursor-pointer"
                 >
                   View
                 </Link>
                 {agent.status === 'active' ? (
                   <button
                     onClick={() => handleDeactivate(agent.id)}
-                    className="text-xs text-danger hover:text-danger/80 transition-colors px-2 py-1"
+                    className="text-xs text-danger hover:text-danger/80 transition-colors duration-150 px-2 py-1 cursor-pointer"
                   >
                     Deactivate
                   </button>
                 ) : (
                   <button
                     onClick={() => handleReactivate(agent.id)}
-                    className="text-xs text-success hover:text-success/80 transition-colors px-2 py-1"
+                    className="text-xs text-success hover:text-success/80 transition-colors duration-150 px-2 py-1 cursor-pointer"
                   >
                     Reactivate
                   </button>

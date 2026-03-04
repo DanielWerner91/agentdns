@@ -103,6 +103,14 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
       <Header />
 
       <main className="flex-1 max-w-6xl mx-auto px-6 py-8 w-full">
+        {/* Page title */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-1">
+            Explore <span className="gradient-text">Agents</span>
+          </h1>
+          <p className="text-sm text-muted">Browse and search the AI agent directory</p>
+        </div>
+
         {/* Search */}
         <div className="mb-8">
           <Suspense fallback={null}>
@@ -128,7 +136,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                     <span className="text-foreground font-medium">{total}</span> agent{total !== 1 ? 's' : ''} found
                     {q && (
                       <>
-                        {' '}for &ldquo;<span className="text-foreground">{q}</span>&rdquo;
+                        {' '}for &ldquo;<span className="text-accent">{q}</span>&rdquo;
                       </>
                     )}
                   </>
@@ -137,7 +145,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                     No agents found
                     {q && (
                       <>
-                        {' '}for &ldquo;<span className="text-foreground">{q}</span>&rdquo;
+                        {' '}for &ldquo;<span className="text-accent">{q}</span>&rdquo;
                       </>
                     )}
                   </>
@@ -153,7 +161,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
+              <div className="text-center py-16 bg-surface/40 border border-border rounded-xl">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-muted mb-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <h3 className="text-lg font-semibold mb-2">No agents found</h3>
                 <p className="text-muted text-sm mb-4">
@@ -161,7 +169,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                 </p>
                 <Link
                   href="/explore"
-                  className="text-accent hover:text-accent-hover text-sm font-medium"
+                  className="text-accent hover:text-accent-hover text-sm font-medium cursor-pointer"
                 >
                   Clear all filters
                 </Link>
@@ -213,7 +221,7 @@ function PaginationLink({
   return (
     <Link
       href={`/explore?${params.toString()}`}
-      className="px-4 py-2 bg-surface border border-border rounded-lg text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors"
+      className="px-4 py-2 bg-surface/60 border border-border rounded-lg text-sm text-muted hover:text-foreground hover:border-accent/30 transition-all duration-150 cursor-pointer"
     >
       {children}
     </Link>

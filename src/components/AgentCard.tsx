@@ -14,12 +14,12 @@ export function AgentCard({ agent }: AgentCardProps) {
   return (
     <Link
       href={`/agent/${agent.slug}`}
-      className="block bg-surface border border-border rounded-xl p-5 hover:border-accent/50 transition-colors group"
+      className="block bg-surface/60 border border-border rounded-xl p-5 card-lift glow-border group cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 mb-1">
-            <h3 className="font-semibold text-foreground group-hover:text-accent transition-colors truncate">
+            <h3 className="font-semibold text-foreground group-hover:text-accent transition-colors duration-150 truncate">
               {agent.name}
             </h3>
             {agent.is_verified && <VerifiedBadge />}
@@ -56,7 +56,7 @@ export function AgentCard({ agent }: AgentCardProps) {
       )}
 
       {/* Bottom row: protocols + stats */}
-      <div className="flex items-center justify-between pt-3 border-t border-border">
+      <div className="flex items-center justify-between pt-3 border-t border-border/50">
         <div className="flex items-center gap-1.5">
           {agent.protocols.map((p) => (
             <ProtocolBadge key={p} protocol={p} />

@@ -60,7 +60,7 @@ export function ExploreFilters() {
         <select
           value={activeSort}
           onChange={(e) => updateParam('sort', e.target.value)}
-          className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+          className="w-full bg-surface/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-accent transition-colors cursor-pointer"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -74,10 +74,10 @@ export function ExploreFilters() {
       <div>
         <button
           onClick={toggleVerified}
-          className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm transition-colors ${
+          className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm transition-all duration-150 cursor-pointer ${
             verifiedOnly
               ? 'bg-accent/10 border-accent/30 text-accent'
-              : 'bg-surface border-border text-muted hover:text-foreground'
+              : 'bg-surface/60 border-border text-muted hover:text-foreground hover:border-accent/20'
           }`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -90,25 +90,22 @@ export function ExploreFilters() {
       {/* Categories */}
       <div>
         <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Category</h4>
-        <div className="space-y-1">
-          <button
+        <div className="space-y-0.5">
+          <FilterButton
+            active={!activeCategory}
             onClick={() => updateParam('category', '')}
-            className={`block w-full text-left px-3 py-1.5 rounded text-sm transition-colors ${
-              !activeCategory ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground'
-            }`}
           >
             All categories
-          </button>
+          </FilterButton>
           {CATEGORIES.map((cat) => (
-            <button
+            <FilterButton
               key={cat}
+              active={activeCategory === cat}
               onClick={() => updateParam('category', activeCategory === cat ? '' : cat)}
-              className={`block w-full text-left px-3 py-1.5 rounded text-sm capitalize transition-colors ${
-                activeCategory === cat ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground'
-              }`}
+              className="capitalize"
             >
               {cat}
-            </button>
+            </FilterButton>
           ))}
         </div>
       </div>
@@ -116,28 +113,50 @@ export function ExploreFilters() {
       {/* Protocols */}
       <div>
         <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Protocol</h4>
-        <div className="space-y-1">
-          <button
+        <div className="space-y-0.5">
+          <FilterButton
+            active={!activeProtocol}
             onClick={() => updateParam('protocol', '')}
-            className={`block w-full text-left px-3 py-1.5 rounded text-sm transition-colors ${
-              !activeProtocol ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground'
-            }`}
           >
             All protocols
-          </button>
+          </FilterButton>
           {PROTOCOLS.map((proto) => (
-            <button
+            <FilterButton
               key={proto}
+              active={activeProtocol === proto}
               onClick={() => updateParam('protocol', activeProtocol === proto ? '' : proto)}
-              className={`block w-full text-left px-3 py-1.5 rounded text-sm uppercase font-mono transition-colors ${
-                activeProtocol === proto ? 'text-accent bg-accent/10' : 'text-muted hover:text-foreground'
-              }`}
+              className="uppercase font-mono"
             >
               {proto}
-            </button>
+            </FilterButton>
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  children,
+  className = '',
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`block w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all duration-150 cursor-pointer ${
+        active
+          ? 'text-accent bg-accent/10'
+          : 'text-muted hover:text-foreground hover:bg-surface-hover'
+      } ${className}`}
+    >
+      {children}
+    </button>
   );
 }

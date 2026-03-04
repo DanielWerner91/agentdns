@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #0f172a;
-  --color-foreground: #f1f5f9;
-  --color-surface: #1e293b;
-  --color-surface-hover: #334155;
-  --color-border: #334155;
-  --color-muted: #94a3b8;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
+  --color-background: #060918;
+  --color-foreground: #e2e8f0;
+  --color-surface: #0d1225;
+  --color-surface-hover: #151d35;
+  --color-border: #1e2a4a;
+  --color-border-glow: #06b6d440;
+  --color-muted: #64748b;
+  --color-accent: #06b6d4;
+  --color-accent-hover: #0891b2;
+  --color-accent-2: #8b5cf6;
+  --color-accent-2-hover: #7c3aed;
   --color-success: #22c55e;
   --color-warning: #eab308;
   --color-danger: #ef4444;
@@ -22,6 +25,112 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
+/* Retro perspective grid for hero */
+@keyframes grid-scroll {
+  0% { transform: rotateX(45deg) translateY(0); }
+  100% { transform: rotateX(45deg) translateY(60px); }
+}
+
+.retro-grid {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  perspective: 400px;
+}
+
+.retro-grid::before {
+  content: '';
+  position: absolute;
+  inset: -200% 0 0 -50%;
+  width: 200%;
+  height: 400%;
+  background-image:
+    linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform-origin: center top;
+  animation: grid-scroll 4s linear infinite;
+  opacity: 0.3;
+}
+
+.retro-grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--color-background) 5%, transparent 60%);
+}
+
+/* Glow effects */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 60px rgba(6, 182, 212, 0.05);
+}
+
+.glow-cyan-hover:hover {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.25), 0 0 80px rgba(6, 182, 212, 0.1);
+}
+
+.glow-border {
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+.glow-border:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 50%, #06b6d4 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-animated {
+  background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 50%, #06b6d4 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 6s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 200% center; }
+}
+
+/* Floating particles keyframe */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.4; }
+  25% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }
+  50% { transform: translateY(-10px) translateX(-5px); opacity: 0.5; }
+  75% { transform: translateY(-30px) translateX(15px); opacity: 0.7; }
+}
+
+/* Pulse ring for search bar */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.3); }
+  70% { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+}
+
+.search-glow:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.2), 0 0 60px rgba(6, 182, 212, 0.05);
+}
+
+/* Card hover lift */
+.card-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(6, 182, 212, 0.1), 0 0 1px rgba(6, 182, 212, 0.3);
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -35,4 +144,15 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .retro-grid::before,
+  .gradient-text-animated {
+    animation: none;
+  }
+  .card-lift:hover {
+    transform: none;
+  }
 }
