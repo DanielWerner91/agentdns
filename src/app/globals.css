@@ -152,10 +152,22 @@ body {
   background: var(--color-muted);
 }
 
+/* Animated gradient for 21st.dev hero headline */
+@keyframes gradient-anim {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  animation: gradient-anim 6s ease infinite;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .retro-grid::before,
-  .gradient-text-animated {
+  .gradient-text-animated,
+  .animate-gradient {
     animation: none;
   }
   .card-lift:hover {

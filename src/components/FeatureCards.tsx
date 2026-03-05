@@ -1,113 +1,157 @@
 'use client';
 
-import { useRef } from 'react';
-import { Search, Zap, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { Search, Zap, Shield } from 'lucide-react';
+
+// 21st.dev generated FeatureCard with mouse-following radial glow
+interface FeatureCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  accentColor: string;
+  delay: number;
+}
+
+const FeatureCard: React.FC<FeatureCardProps> = ({
+  icon,
+  title,
+  description,
+  accentColor,
+  delay,
+}) => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.3 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!cardRef.current) return;
+      const rect = cardRef.current.getBoundingClientRect();
+      setMousePosition({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    };
+
+    if (isHovered) {
+      window.addEventListener('mousemove', handleMouseMove);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isHovered]);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.6, delay, ease: 'easeOut' }}
+    >
+      <div
+        ref={cardRef}
+        className="relative h-full rounded-2xl border border-white/10 bg-[#0a0f1e]/80 backdrop-blur-xl p-8 overflow-hidden group cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Mouse-following radial glow */}
+        {isHovered && (
+          <div
+            className="absolute pointer-events-none transition-opacity duration-300"
+            style={{
+              left: mousePosition.x,
+              top: mousePosition.y,
+              width: '400px',
+              height: '400px',
+              transform: 'translate(-50%, -50%)',
+              background: `radial-gradient(circle, ${accentColor}15 0%, transparent 70%)`,
+              opacity: 1,
+            }}
+          />
+        )}
+
+        {/* Border glow on hover */}
+        <div
+          className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{
+            background: `linear-gradient(135deg, ${accentColor}20, transparent)`,
+            padding: '1px',
+            WebkitMask:
+              'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude',
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10">
+          {/* Gradient icon container */}
+          <div
+            className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-6 relative overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${accentColor}30, ${accentColor}10)`,
+              border: `1px solid ${accentColor}40`,
+            }}
+          >
+            <div
+              className="absolute inset-0 opacity-50"
+              style={{
+                background: `radial-gradient(circle at 30% 30%, ${accentColor}40, transparent)`,
+              }}
+            />
+            <div className="relative z-10" style={{ color: accentColor }}>
+              {icon}
+            </div>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-2xl font-bold text-white mb-3">{title}</h3>
+
+          {/* Description */}
+          <p className="text-gray-400 leading-relaxed">{description}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 
 const features = [
   {
-    icon: Search,
+    icon: <Search className="w-8 h-8" />,
     title: 'Discover',
-    description: 'Find agents by capability, protocol, or category. Search the entire agent ecosystem from one place.',
-    gradient: 'from-cyan-500 to-cyan-400',
-    glowColor: 'rgba(6, 182, 212, 0.15)',
-    borderGlow: 'rgba(6, 182, 212, 0.4)',
+    description:
+      'Find agents by capability, protocol, or category. Search the entire agent ecosystem from one place.',
+    accentColor: '#06b6d4',
+    delay: 0.1,
   },
   {
-    icon: Zap,
+    icon: <Zap className="w-8 h-8" />,
     title: 'Resolve',
-    description: 'Get agent endpoints, capabilities, and communication preferences in a single API call. Built for machine speed.',
-    gradient: 'from-violet-500 to-violet-400',
-    glowColor: 'rgba(139, 92, 246, 0.15)',
-    borderGlow: 'rgba(139, 92, 246, 0.4)',
+    description:
+      'Get agent endpoints, capabilities, and communication preferences in a single API call. Built for machine speed.',
+    accentColor: '#8b5cf6',
+    delay: 0.2,
   },
   {
-    icon: ShieldCheck,
+    icon: <Shield className="w-8 h-8" />,
     title: 'Trust',
-    description: 'Trust scores computed from real usage data. Verified agents, lookup analytics, and reputation tracking.',
-    gradient: 'from-emerald-500 to-emerald-400',
-    glowColor: 'rgba(16, 185, 129, 0.15)',
-    borderGlow: 'rgba(16, 185, 129, 0.4)',
+    description:
+      'Trust scores computed from real usage data. Verified agents, lookup analytics, and reputation tracking.',
+    accentColor: '#22c55e',
+    delay: 0.3,
   },
 ];
 
 export function FeatureCards() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-80px' });
-
   return (
-    <div ref={ref} className="grid grid-cols-1 md:grid-cols-3 gap-5">
-      {features.map((feature, i) => (
-        <FeatureCard key={feature.title} {...feature} index={i} isInView={isInView} />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {features.map((feature, index) => (
+        <FeatureCard key={index} {...feature} />
       ))}
     </div>
-  );
-}
-
-function FeatureCard({
-  icon: Icon,
-  title,
-  description,
-  gradient,
-  glowColor,
-  index,
-  isInView,
-}: (typeof features)[number] & { index: number; isInView: boolean }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = cardRef.current;
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
-    card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
-    card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
-  };
-
-  return (
-    <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      className="group relative rounded-2xl p-[1px] cursor-pointer"
-      initial={{ opacity: 0, y: 30 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-      transition={{ duration: 0.6, delay: index * 0.15, ease: 'easeOut' }}
-      whileHover={{ y: -4, transition: { duration: 0.3 } }}
-    >
-      {/* Hover glow that follows mouse */}
-      <div
-        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), ${glowColor}, transparent 40%)`,
-        }}
-      />
-
-      {/* Card border */}
-      <div className="absolute inset-0 rounded-2xl border border-white/[0.06] group-hover:border-white/[0.12] transition-colors duration-500" />
-
-      {/* Card content */}
-      <div className="relative bg-white/[0.02] backdrop-blur-sm rounded-2xl p-7 h-full">
-        {/* Icon */}
-        <motion.div
-          className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} bg-opacity-10 flex items-center justify-center mb-5`}
-          whileHover={{ scale: 1.12, rotate: 3 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-        >
-          <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
-        </motion.div>
-
-        {/* Title */}
-        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-300 transition-all duration-300">
-          {title}
-        </h3>
-
-        {/* Description */}
-        <p className="text-sm text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors duration-300">
-          {description}
-        </p>
-
-        {/* Bottom accent line */}
-        <div className="mt-5 h-[1px] w-0 group-hover:w-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-700" />
-      </div>
-    </motion.div>
   );
 }
