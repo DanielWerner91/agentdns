@@ -1,7 +1,7 @@
 import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
 
-const PROTECTED_PATHS = ['/dashboard', '/register'];
+const PROTECTED_PATHS = ['/dashboard'];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -14,7 +14,7 @@ export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request });
 
   if (!token) {
-    const signInUrl = new URL('/api/auth/signin', request.url);
+    const signInUrl = new URL('/register', request.url);
     signInUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);
   }
@@ -23,5 +23,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/register/:path*'],
+  matcher: ['/dashboard/:path*'],
 };
