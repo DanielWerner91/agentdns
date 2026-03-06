@@ -1,87 +1,32 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, useMotionValue, useMotionTemplate, animate } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Search, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { GlowEffect } from '@/components/ui/glow-effect';
+import ShaderBackground from '@/components/ui/shader-background';
 
 /* ─── Cinematic Text Reveal (from 21st.dev TextReveal) ─── */
-/* CSS-only letter-by-letter blur reveal with cubic-bezier easing */
+/* Pure CSS letter-by-letter blur reveal with cubic-bezier easing */
 const CinematicText: React.FC<{
   text: string;
   className?: string;
-  startDelay?: number;
-}> = ({ text, className, startDelay = 0 }) => {
+  charOffset?: number;
+}> = ({ text, className, charOffset = 0 }) => {
   return (
-    <>
-      <span className={cn('inline-flex flex-wrap justify-center', className)} aria-label={text}>
-        {text.split('').map((char, i) => (
-          <span
-            key={i}
-            className="cinematic-char inline-block"
-            style={{ '--index': i + startDelay * 25 } as React.CSSProperties}
-          >
-            {char === ' ' ? '\u00A0' : char}
-          </span>
-        ))}
-      </span>
-      <style jsx>{`
-        .cinematic-char {
-          opacity: 0;
-          filter: blur(12px);
-          transform: translateY(40%) scale(1.1) translateZ(0);
-          animation: cinematic-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          animation-delay: calc(0.04s * var(--index));
-          will-change: transform, opacity, filter;
-        }
-        @keyframes cinematic-reveal {
-          0% {
-            opacity: 0;
-            filter: blur(12px);
-            transform: translateY(40%) scale(1.1);
-          }
-          50% {
-            opacity: 0.7;
-            filter: blur(4px);
-          }
-          100% {
-            opacity: 1;
-            filter: blur(0);
-            transform: translateY(0) scale(1);
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .cinematic-char {
-            opacity: 1 !important;
-            transform: none !important;
-            filter: none !important;
-            animation: none !important;
-          }
-        }
-      `}</style>
-    </>
-  );
-};
-
-/* ─── Animated Grid Pattern (from 21st.dev / Magic UI) ─── */
-const AnimatedGridPattern: React.FC = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(6, 182, 212, 0.06)" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#hero-grid)" />
-      </svg>
-      {/* Fade out grid at edges */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#060918] via-transparent to-[#060918]" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#060918] via-transparent to-[#060918]" />
-    </div>
+    <span className={cn('inline-flex flex-wrap justify-center', className)} aria-label={text}>
+      {text.split('').map((char, i) => (
+        <span
+          key={i}
+          className="cinematic-char inline-block"
+          style={{ '--index': i + charOffset } as React.CSSProperties}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      ))}
+    </span>
   );
 };
 
@@ -114,23 +59,12 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
   ];
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#060918] flex items-center justify-center">
-      {/* Grid pattern background */}
-      <AnimatedGridPattern />
+    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center">
+      {/* WebGL Shader Background — the real deal */}
+      <ShaderBackground className="absolute inset-0 w-full h-full" />
 
-      {/* Ambient glow orbs */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] pointer-events-none">
-        <GlowEffect
-          colors={['#06b6d4', '#8b5cf6', '#06b6d4', '#8b5cf6']}
-          mode="rotate"
-          blur="strongest"
-          duration={8}
-          scale={1.2}
-        />
-      </div>
-
-      {/* Subtle secondary orb */}
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-violet-500/[0.04] rounded-full blur-[100px] pointer-events-none" />
+      {/* Overlay to darken center for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#060918]/40 via-[#060918]/60 to-[#060918]/90 pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-20">
         {/* Badge */}
@@ -140,16 +74,16 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
           transition={{ duration: 0.5 }}
           className="flex justify-center mb-14"
         >
-          <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/[0.1] bg-white/[0.05] backdrop-blur-md">
             <motion.div
               className="w-1.5 h-1.5 rounded-full bg-cyan-400"
               animate={{ scale: [1, 1.4, 1], opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <span className="text-sm text-gray-400 font-medium tracking-wide">
+            <span className="text-sm text-gray-300 font-medium tracking-wide">
               The open registry for AI agents
             </span>
-            <Sparkles className="w-3.5 h-3.5 text-cyan-500/60" />
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400/60" />
           </div>
         </motion.div>
 
@@ -158,13 +92,13 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
           <CinematicText
             text="DNS for the"
             className="text-white"
-            startDelay={0}
+            charOffset={0}
           />
           <br />
           <CinematicText
             text="Agent Economy"
             className="bg-gradient-to-r from-cyan-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient"
-            startDelay={0.5}
+            charOffset={12}
           />
         </h1>
 
@@ -172,46 +106,39 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
         <motion.p
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
-          transition={{ duration: 0.8, delay: 1.0 }}
-          className="text-center text-gray-500 text-lg md:text-xl mb-14 max-w-2xl mx-auto leading-relaxed"
+          transition={{ duration: 0.8, delay: 1.2 }}
+          className="text-center text-gray-400 text-lg md:text-xl mb-14 max-w-2xl mx-auto leading-relaxed"
         >
           Discover AI agents by capability. Resolve endpoints in milliseconds.
           Trust scores backed by real data.
         </motion.p>
 
-        {/* Search Bar with GlowEffect border */}
+        {/* Search Bar */}
         <motion.div
-          initial={{ opacity: 0, y: 20, filter: 'blur(4px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-          transition={{ duration: 0.6, delay: 1.2 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.4 }}
           className="mb-8"
         >
           <form onSubmit={handleSubmit}>
-            <div className="relative max-w-3xl mx-auto">
-              {/* Animated glow behind the search bar — only on focus */}
-              {searchFocused && (
-                <div className="absolute -inset-1 rounded-2xl overflow-hidden">
-                  <GlowEffect
-                    colors={['#06b6d4', '#8b5cf6', '#06b6d4', '#8b5cf6']}
-                    mode="rotate"
-                    blur="soft"
-                    duration={4}
-                  />
-                </div>
+            <div
+              className={cn(
+                'relative max-w-3xl mx-auto rounded-2xl transition-all duration-500',
+                searchFocused && 'shadow-[0_0_40px_rgba(6,182,212,0.15),0_0_80px_rgba(139,92,246,0.08)]'
               )}
-
+            >
               <div
                 className={cn(
-                  'relative flex items-center rounded-2xl border transition-all duration-300',
+                  'relative flex items-center rounded-2xl border backdrop-blur-xl transition-all duration-300',
                   searchFocused
-                    ? 'border-cyan-400/40 bg-[#0a0f1e]'
-                    : 'border-white/[0.08] bg-[#0a0f1e]/80'
+                    ? 'border-cyan-400/40 bg-[#060918]/80'
+                    : 'border-white/[0.1] bg-[#060918]/60'
                 )}
               >
                 <Search
                   className={cn(
                     'absolute left-6 w-5 h-5 transition-colors duration-300',
-                    searchFocused ? 'text-cyan-400' : 'text-gray-600'
+                    searchFocused ? 'text-cyan-400' : 'text-gray-500'
                   )}
                 />
                 <input
@@ -222,7 +149,7 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
                   placeholder="Find any agent by name or capability..."
-                  className="w-full bg-transparent text-white placeholder-gray-600 pl-16 pr-32 py-5 text-lg focus:outline-none"
+                  className="w-full bg-transparent text-white placeholder-gray-500 pl-16 pr-32 py-5 text-lg focus:outline-none"
                 />
                 <motion.button
                   type="submit"
@@ -241,7 +168,7 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1.4 }}
+          transition={{ duration: 0.6, delay: 1.6 }}
           className="flex flex-wrap justify-center gap-2.5 mb-14"
         >
           <span className="text-gray-600 text-sm self-center mr-1">Try:</span>
@@ -249,7 +176,7 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
             <Link
               key={item}
               href={`/explore?capability=${item}`}
-              className="px-4 py-1.5 rounded-full text-sm text-gray-500 hover:text-cyan-400 border border-white/[0.06] hover:border-cyan-500/30 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300 cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-sm text-gray-400 hover:text-cyan-400 border border-white/[0.08] hover:border-cyan-500/30 bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 cursor-pointer"
             >
               {item}
             </Link>
@@ -261,10 +188,10 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.6 }}
+            transition={{ duration: 0.6, delay: 1.8 }}
             className="text-center"
           >
-            <div className="inline-flex items-baseline gap-3 px-6 py-3 rounded-full border border-white/[0.06] bg-white/[0.02]">
+            <div className="inline-flex items-baseline gap-3 px-6 py-3 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
               <span className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
                 {agentCount.toLocaleString()}+
               </span>

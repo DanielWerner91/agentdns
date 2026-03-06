@@ -85,6 +85,33 @@ body {
   background: var(--color-muted);
 }
 
+/* Cinematic text reveal — 21st.dev TextReveal pattern */
+.cinematic-char {
+  opacity: 0;
+  filter: blur(12px);
+  transform: translateY(40%) scale(1.1) translateZ(0);
+  animation: cinematic-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(0.04s * var(--index));
+  will-change: transform, opacity, filter;
+}
+
+@keyframes cinematic-reveal {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(40%) scale(1.1);
+  }
+  50% {
+    opacity: 0.7;
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-gradient {
@@ -92,5 +119,11 @@ body {
   }
   .card-lift:hover {
     transform: none;
+  }
+  .cinematic-char {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
   }
 }
