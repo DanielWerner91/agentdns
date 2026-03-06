@@ -5,137 +5,83 @@ import { useRouter } from 'next/navigation';
 import { motion, useMotionValue, useMotionTemplate, animate } from 'framer-motion';
 import { Search, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { GlowEffect } from '@/components/ui/glow-effect';
 
-/* ─── Canvas Particle Field (adapted from 21st.dev SpaceBackground) ─── */
-const ParticleField: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationId: number;
-    let particles: {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-      opacity: number;
-      hue: number;
-    }[] = [];
-
-    const resize = () => {
-      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    };
-
-    const initParticles = () => {
-      const count = Math.min(200, Math.floor((canvas.offsetWidth * canvas.offsetHeight) / 5000));
-      particles = Array.from({ length: count }, () => ({
-        x: Math.random() * canvas.offsetWidth,
-        y: Math.random() * canvas.offsetHeight,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 2 + 0.5,
-        opacity: Math.random() * 0.5 + 0.1,
-        hue: Math.random() > 0.5 ? 186 : 263, // cyan or violet
-      }));
-    };
-
-    const draw = () => {
-      const w = canvas.offsetWidth;
-      const h = canvas.offsetHeight;
-      ctx.clearRect(0, 0, w, h);
-
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-
-        if (p.x < 0) p.x = w;
-        if (p.x > w) p.x = 0;
-        if (p.y < 0) p.y = h;
-        if (p.y > h) p.y = 0;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle =
-          p.hue === 186
-            ? `rgba(6, 182, 212, ${p.opacity})`
-            : `rgba(139, 92, 246, ${p.opacity})`;
-        ctx.fill();
-      }
-
-      // Draw connections between nearby particles
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 100) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(6, 182, 212, ${0.08 * (1 - dist / 100)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
+/* ─── Cinematic Text Reveal (from 21st.dev TextReveal) ─── */
+/* CSS-only letter-by-letter blur reveal with cubic-bezier easing */
+const CinematicText: React.FC<{
+  text: string;
+  className?: string;
+  startDelay?: number;
+}> = ({ text, className, startDelay = 0 }) => {
+  return (
+    <>
+      <span className={cn('inline-flex flex-wrap justify-center', className)} aria-label={text}>
+        {text.split('').map((char, i) => (
+          <span
+            key={i}
+            className="cinematic-char inline-block"
+            style={{ '--index': i + startDelay * 25 } as React.CSSProperties}
+          >
+            {char === ' ' ? '\u00A0' : char}
+          </span>
+        ))}
+      </span>
+      <style jsx>{`
+        .cinematic-char {
+          opacity: 0;
+          filter: blur(12px);
+          transform: translateY(40%) scale(1.1) translateZ(0);
+          animation: cinematic-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: calc(0.04s * var(--index));
+          will-change: transform, opacity, filter;
+        }
+        @keyframes cinematic-reveal {
+          0% {
+            opacity: 0;
+            filter: blur(12px);
+            transform: translateY(40%) scale(1.1);
+          }
+          50% {
+            opacity: 0.7;
+            filter: blur(4px);
+          }
+          100% {
+            opacity: 1;
+            filter: blur(0);
+            transform: translateY(0) scale(1);
           }
         }
-      }
-
-      animationId = requestAnimationFrame(draw);
-    };
-
-    resize();
-    initParticles();
-    draw();
-
-    window.addEventListener('resize', resize);
-    return () => {
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(animationId);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full"
-      style={{ opacity: 0.6 }}
-    />
+        @media (prefers-reduced-motion: reduce) {
+          .cinematic-char {
+            opacity: 1 !important;
+            transform: none !important;
+            filter: none !important;
+            animation: none !important;
+          }
+        }
+      `}</style>
+    </>
   );
 };
 
-/* ─── Word-by-word blur reveal (adapted from 21st.dev Animated Hero) ─── */
-const BlurRevealText: React.FC<{
-  text: string;
-  className?: string;
-  delay?: number;
-}> = ({ text, className = '', delay = 0 }) => {
-  const words = text.split(' ');
-
+/* ─── Animated Grid Pattern (from 21st.dev / Magic UI) ─── */
+const AnimatedGridPattern: React.FC = () => {
   return (
-    <span className={className}>
-      {words.map((word, i) => (
-        <motion.span
-          key={i}
-          className="inline-block"
-          initial={{ opacity: 0, filter: 'blur(8px)', y: 10 }}
-          animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-          transition={{
-            duration: 0.5,
-            delay: delay + i * 0.12,
-            ease: [0.25, 0.4, 0.25, 1],
-          }}
-        >
-          {word}
-          {i < words.length - 1 ? '\u00A0' : ''}
-        </motion.span>
-      ))}
-    </span>
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(6, 182, 212, 0.06)" strokeWidth="1" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#hero-grid)" />
+      </svg>
+      {/* Fade out grid at edges */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#060918] via-transparent to-[#060918]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#060918] via-transparent to-[#060918]" />
+    </div>
   );
 };
 
@@ -149,19 +95,6 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
-
-  const glowHue = useMotionValue(186);
-
-  useEffect(() => {
-    animate(glowHue, [186, 263, 186], {
-      ease: 'easeInOut',
-      duration: 8,
-      repeat: Infinity,
-    });
-  }, [glowHue]);
-
-  const borderGlow = useMotionTemplate`hsla(${glowHue}, 80%, 55%, 0.4)`;
-  const shadowGlow = useMotionTemplate`0 0 30px hsla(${glowHue}, 80%, 55%, 0.15), 0 0 60px hsla(${glowHue}, 80%, 55%, 0.08)`;
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -182,22 +115,29 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#060918] flex items-center justify-center">
-      {/* Canvas particle field */}
-      <ParticleField />
+      {/* Grid pattern background */}
+      <AnimatedGridPattern />
 
-      {/* Radial gradient overlays */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-cyan-500/[0.07] rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-violet-500/[0.07] rounded-full blur-[100px] pointer-events-none" />
+      {/* Ambient glow orbs */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] pointer-events-none">
+        <GlowEffect
+          colors={['#06b6d4', '#8b5cf6', '#06b6d4', '#8b5cf6']}
+          mode="rotate"
+          blur="strongest"
+          duration={8}
+          scale={1.2}
+        />
+      </div>
 
-      {/* Top edge gradient line */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+      {/* Subtle secondary orb */}
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-violet-500/[0.04] rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-20">
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
           className="flex justify-center mb-14"
         >
           <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
@@ -213,54 +153,66 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
           </div>
         </motion.div>
 
-        {/* Headline — word-by-word blur reveal */}
-        <h1 className="text-center text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[1.1] mb-8">
-          <BlurRevealText
+        {/* Headline — cinematic letter-by-letter blur reveal */}
+        <h1 className="text-center text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold leading-[1.05] mb-8 tracking-tight">
+          <CinematicText
             text="DNS for the"
-            className="bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent"
-            delay={0.3}
+            className="text-white"
+            startDelay={0}
           />
           <br />
-          <BlurRevealText
+          <CinematicText
             text="Agent Economy"
             className="bg-gradient-to-r from-cyan-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient"
-            delay={0.7}
+            startDelay={0.5}
           />
         </h1>
 
         {/* Subtitle */}
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
+          initial={{ opacity: 0, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, delay: 1.0 }}
           className="text-center text-gray-500 text-lg md:text-xl mb-14 max-w-2xl mx-auto leading-relaxed"
         >
           Discover AI agents by capability. Resolve endpoints in milliseconds.
           Trust scores backed by real data.
         </motion.p>
 
-        {/* Search Bar — animated border glow */}
+        {/* Search Bar with GlowEffect border */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.4 }}
+          initial={{ opacity: 0, y: 20, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.6, delay: 1.2 }}
           className="mb-8"
         >
           <form onSubmit={handleSubmit}>
-            <motion.div
-              className="relative max-w-3xl mx-auto rounded-2xl p-[1px]"
-              style={{
-                background: searchFocused
-                  ? 'linear-gradient(135deg, rgba(6,182,212,0.4), rgba(139,92,246,0.4))'
-                  : 'rgba(255,255,255,0.06)',
-                boxShadow: searchFocused ? shadowGlow : undefined,
-              }}
-            >
-              <div className="relative flex items-center bg-[#0a0f1e] rounded-2xl">
+            <div className="relative max-w-3xl mx-auto">
+              {/* Animated glow behind the search bar — only on focus */}
+              {searchFocused && (
+                <div className="absolute -inset-1 rounded-2xl overflow-hidden">
+                  <GlowEffect
+                    colors={['#06b6d4', '#8b5cf6', '#06b6d4', '#8b5cf6']}
+                    mode="rotate"
+                    blur="soft"
+                    duration={4}
+                  />
+                </div>
+              )}
+
+              <div
+                className={cn(
+                  'relative flex items-center rounded-2xl border transition-all duration-300',
+                  searchFocused
+                    ? 'border-cyan-400/40 bg-[#0a0f1e]'
+                    : 'border-white/[0.08] bg-[#0a0f1e]/80'
+                )}
+              >
                 <Search
-                  className={`absolute left-6 w-5 h-5 transition-colors duration-300 ${
+                  className={cn(
+                    'absolute left-6 w-5 h-5 transition-colors duration-300',
                     searchFocused ? 'text-cyan-400' : 'text-gray-600'
-                  }`}
+                  )}
                 />
                 <input
                   ref={searchRef}
@@ -281,7 +233,7 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
                   Search
                 </motion.button>
               </div>
-            </motion.div>
+            </div>
           </form>
         </motion.div>
 
@@ -289,11 +241,11 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1.6 }}
+          transition={{ duration: 0.6, delay: 1.4 }}
           className="flex flex-wrap justify-center gap-2.5 mb-14"
         >
           <span className="text-gray-600 text-sm self-center mr-1">Try:</span>
-          {quickSearchItems.map((item, i) => (
+          {quickSearchItems.map((item) => (
             <Link
               key={item}
               href={`/explore?capability=${item}`}
@@ -309,7 +261,7 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.8 }}
+            transition={{ duration: 0.6, delay: 1.6 }}
             className="text-center"
           >
             <div className="inline-flex items-baseline gap-3 px-6 py-3 rounded-full border border-white/[0.06] bg-white/[0.02]">
