@@ -1,97 +1,145 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useMotionValue, useMotionTemplate, animate } from 'framer-motion';
 import { Search, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
-const cn = (...classes: (string | boolean | undefined)[]) => {
-  return classes.filter(Boolean).join(' ');
-};
+/* ─── Canvas Particle Field (adapted from 21st.dev SpaceBackground) ─── */
+const ParticleField: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-// Floating Particles — from 21st.dev generated component
-const FloatingParticles: React.FC = () => {
-  const particles = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 3 + 1,
-    duration: Math.random() * 20 + 10,
-    delay: Math.random() * 5,
-  }));
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationId: number;
+    let particles: {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+      opacity: number;
+      hue: number;
+    }[] = [];
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    };
+
+    const initParticles = () => {
+      const count = Math.min(200, Math.floor((canvas.offsetWidth * canvas.offsetHeight) / 5000));
+      particles = Array.from({ length: count }, () => ({
+        x: Math.random() * canvas.offsetWidth,
+        y: Math.random() * canvas.offsetHeight,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        size: Math.random() * 2 + 0.5,
+        opacity: Math.random() * 0.5 + 0.1,
+        hue: Math.random() > 0.5 ? 186 : 263, // cyan or violet
+      }));
+    };
+
+    const draw = () => {
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle =
+          p.hue === 186
+            ? `rgba(6, 182, 212, ${p.opacity})`
+            : `rgba(139, 92, 246, ${p.opacity})`;
+        ctx.fill();
+      }
+
+      // Draw connections between nearby particles
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 100) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(6, 182, 212, ${0.08 * (1 - dist / 100)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      animationId = requestAnimationFrame(draw);
+    };
+
+    resize();
+    initParticles();
+    draw();
+
+    window.addEventListener('resize', resize);
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationId);
+    };
+  }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((particle) => (
-        <motion.div
-          key={particle.id}
-          className="absolute rounded-full bg-cyan-400/20"
-          style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-            width: particle.size,
-            height: particle.size,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            x: [0, Math.random() * 20 - 10, 0],
-            opacity: [0.2, 0.5, 0.2],
-          }}
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full"
+      style={{ opacity: 0.6 }}
+    />
+  );
+};
+
+/* ─── Word-by-word blur reveal (adapted from 21st.dev Animated Hero) ─── */
+const BlurRevealText: React.FC<{
+  text: string;
+  className?: string;
+  delay?: number;
+}> = ({ text, className = '', delay = 0 }) => {
+  const words = text.split(' ');
+
+  return (
+    <span className={className}>
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          className="inline-block"
+          initial={{ opacity: 0, filter: 'blur(8px)', y: 10 }}
+          animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
           transition={{
-            duration: particle.duration,
-            repeat: Infinity,
-            delay: particle.delay,
-            ease: 'easeInOut',
+            duration: 0.5,
+            delay: delay + i * 0.12,
+            ease: [0.25, 0.4, 0.25, 1],
           }}
-        />
+        >
+          {word}
+          {i < words.length - 1 ? '\u00A0' : ''}
+        </motion.span>
       ))}
-    </div>
+    </span>
   );
 };
 
-// Grid Background — from 21st.dev generated component
-const GridBackground: React.FC = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern
-            id="grid"
-            width="40"
-            height="40"
-            patternUnits="userSpaceOnUse"
-          >
-            <path
-              d="M 40 0 L 0 0 0 40"
-              fill="none"
-              stroke="rgba(6, 182, 212, 0.1)"
-              strokeWidth="1"
-            />
-          </pattern>
-          <linearGradient id="gridGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="rgba(6, 182, 212, 0.2)" />
-            <stop offset="50%" stopColor="rgba(139, 92, 246, 0.2)" />
-            <stop offset="100%" stopColor="rgba(6, 182, 212, 0.2)" />
-          </linearGradient>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-        <motion.line
-          x1="0"
-          y1="50%"
-          x2="100%"
-          y2="50%"
-          stroke="url(#gridGradient)"
-          strokeWidth="2"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 0.5 }}
-          transition={{ duration: 2, ease: 'easeInOut' }}
-        />
-      </svg>
-    </div>
-  );
-};
-
+/* ─── Main Hero ─── */
 interface HeroSectionProps {
   agentCount: number;
 }
@@ -102,25 +150,28 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
   const [searchValue, setSearchValue] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const color = useMotionValue('#06b6d4');
+  const glowHue = useMotionValue(186);
 
   useEffect(() => {
-    animate(color, ['#06b6d4', '#8b5cf6', '#06b6d4'], {
+    animate(glowHue, [186, 263, 186], {
       ease: 'easeInOut',
       duration: 8,
       repeat: Infinity,
-      repeatType: 'reverse',
     });
-  }, [color]);
+  }, [glowHue]);
 
-  const glowColor = useMotionTemplate`0 0 40px ${color}, 0 0 80px ${color}`;
+  const borderGlow = useMotionTemplate`hsla(${glowHue}, 80%, 55%, 0.4)`;
+  const shadowGlow = useMotionTemplate`0 0 30px hsla(${glowHue}, 80%, 55%, 0.15), 0 0 60px hsla(${glowHue}, 80%, 55%, 0.08)`;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (searchValue.trim()) params.set('q', searchValue.trim());
-    router.push(`/explore?${params.toString()}`);
-  };
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const params = new URLSearchParams();
+      if (searchValue.trim()) params.set('q', searchValue.trim());
+      router.push(`/explore?${params.toString()}`);
+    },
+    [searchValue, router]
+  );
 
   const quickSearchItems = [
     'contract-review',
@@ -131,96 +182,85 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#060918] flex items-center justify-center">
-      <GridBackground />
-      <FloatingParticles />
+      {/* Canvas particle field */}
+      <ParticleField />
 
-      {/* Gradient Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-violet-500/5 pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-violet-500/10 rounded-full blur-[120px] pointer-events-none" />
+      {/* Radial gradient overlays */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-cyan-500/[0.07] rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-violet-500/[0.07] rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Top edge gradient line */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
 
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 py-20">
-        {/* Eyebrow Badge */}
+        {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex justify-center mb-12"
+          className="flex justify-center mb-14"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/10 to-violet-500/10 border border-cyan-500/20 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
             <motion.div
-              className="w-2 h-2 rounded-full bg-cyan-400"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [1, 0.5, 1],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
+              className="w-1.5 h-1.5 rounded-full bg-cyan-400"
+              animate={{ scale: [1, 1.4, 1], opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <span className="text-sm font-medium text-cyan-100">
+            <span className="text-sm text-gray-400 font-medium tracking-wide">
               The open registry for AI agents
             </span>
-            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <Sparkles className="w-3.5 h-3.5 text-cyan-500/60" />
           </div>
         </motion.div>
 
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-6xl md:text-7xl lg:text-8xl font-bold text-center mb-8 leading-tight"
-        >
-          <span className="inline-block bg-gradient-to-r from-cyan-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-            DNS for the
-          </span>
+        {/* Headline — word-by-word blur reveal */}
+        <h1 className="text-center text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[1.1] mb-8">
+          <BlurRevealText
+            text="DNS for the"
+            className="bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent"
+            delay={0.3}
+          />
           <br />
-          <span className="inline-block bg-gradient-to-r from-violet-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-            Agent Economy
-          </span>
-        </motion.h1>
+          <BlurRevealText
+            text="Agent Economy"
+            className="bg-gradient-to-r from-cyan-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient"
+            delay={0.7}
+          />
+        </h1>
 
         {/* Subtitle */}
         <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center text-gray-400 text-lg md:text-xl mb-12 max-w-2xl mx-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 1.2 }}
+          className="text-center text-gray-500 text-lg md:text-xl mb-14 max-w-2xl mx-auto leading-relaxed"
         >
           Discover AI agents by capability. Resolve endpoints in milliseconds.
           Trust scores backed by real data.
         </motion.p>
 
-        {/* Search Bar */}
+        {/* Search Bar — animated border glow */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.4 }}
           className="mb-8"
         >
           <form onSubmit={handleSubmit}>
             <motion.div
-              className="relative max-w-3xl mx-auto rounded-2xl"
+              className="relative max-w-3xl mx-auto rounded-2xl p-[1px]"
               style={{
-                boxShadow: searchFocused ? glowColor : undefined,
+                background: searchFocused
+                  ? 'linear-gradient(135deg, rgba(6,182,212,0.4), rgba(139,92,246,0.4))'
+                  : 'rgba(255,255,255,0.06)',
+                boxShadow: searchFocused ? shadowGlow : undefined,
               }}
             >
-              <div
-                className={cn(
-                  'relative flex items-center bg-white/5 backdrop-blur-md rounded-2xl border transition-all duration-300',
-                  searchFocused
-                    ? 'border-cyan-400/50 shadow-2xl'
-                    : 'border-white/10'
-                )}
-              >
+              <div className="relative flex items-center bg-[#0a0f1e] rounded-2xl">
                 <Search
-                  className={cn(
-                    'absolute left-6 w-6 h-6 transition-colors duration-300',
-                    searchFocused ? 'text-cyan-400' : 'text-gray-500'
-                  )}
+                  className={`absolute left-6 w-5 h-5 transition-colors duration-300 ${
+                    searchFocused ? 'text-cyan-400' : 'text-gray-600'
+                  }`}
                 />
                 <input
                   ref={searchRef}
@@ -230,13 +270,13 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
                   placeholder="Find any agent by name or capability..."
-                  className="w-full bg-transparent text-white placeholder-gray-500 px-16 py-6 text-lg focus:outline-none"
+                  className="w-full bg-transparent text-white placeholder-gray-600 pl-16 pr-32 py-5 text-lg focus:outline-none"
                 />
                 <motion.button
                   type="submit"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="absolute right-3 px-6 py-3 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl font-semibold hover:from-cyan-400 hover:to-violet-400 transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="absolute right-3 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-xl text-sm font-semibold hover:from-cyan-400 hover:to-violet-400 transition-all duration-300 cursor-pointer"
                 >
                   Search
                 </motion.button>
@@ -245,46 +285,38 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
           </form>
         </motion.div>
 
-        {/* Quick Search Pills */}
+        {/* Quick search pills */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="flex flex-wrap justify-center gap-3 mb-12"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 1.6 }}
+          className="flex flex-wrap justify-center gap-2.5 mb-14"
         >
-          <span className="text-gray-500 text-sm self-center">
-            Popular searches:
-          </span>
-          {quickSearchItems.map((item, index) => (
-            <motion.div
+          <span className="text-gray-600 text-sm self-center mr-1">Try:</span>
+          {quickSearchItems.map((item, i) => (
+            <Link
               key={item}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.9 + index * 0.1 }}
+              href={`/explore?capability=${item}`}
+              className="px-4 py-1.5 rounded-full text-sm text-gray-500 hover:text-cyan-400 border border-white/[0.06] hover:border-cyan-500/30 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300 cursor-pointer"
             >
-              <Link
-                href={`/explore?capability=${item}`}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/30 rounded-full text-sm text-gray-300 hover:text-cyan-300 transition-all duration-300 backdrop-blur-sm inline-block cursor-pointer"
-              >
-                {item}
-              </Link>
-            </motion.div>
+              {item}
+            </Link>
           ))}
         </motion.div>
 
-        {/* Agent Count */}
+        {/* Agent count */}
         {agentCount > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.2 }}
+            transition={{ duration: 0.6, delay: 1.8 }}
             className="text-center"
           >
-            <div className="inline-flex flex-col items-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-500/10 to-violet-500/10 border border-white/10 rounded-2xl backdrop-blur-sm">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+            <div className="inline-flex items-baseline gap-3 px-6 py-3 rounded-full border border-white/[0.06] bg-white/[0.02]">
+              <span className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
                 {agentCount.toLocaleString()}+
-              </div>
-              <div className="text-sm text-gray-400">Registered AI Agents</div>
+              </span>
+              <span className="text-sm text-gray-500">registered agents</span>
             </div>
           </motion.div>
         )}
