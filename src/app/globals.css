@@ -112,6 +112,23 @@ body {
   }
 }
 
+/* Marquee — from 21st.dev magicui/marquee */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - var(--gap))); }
+}
+@keyframes marquee-vertical {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-100% - var(--gap))); }
+}
+
+@utility animate-marquee {
+  animation: marquee var(--duration) linear infinite;
+}
+@utility animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-gradient {
@@ -124,6 +141,10 @@ body {
     opacity: 1 !important;
     transform: none !important;
     filter: none !important;
+    animation: none !important;
+  }
+  .animate-marquee,
+  .animate-marquee-vertical {
     animation: none !important;
   }
 }

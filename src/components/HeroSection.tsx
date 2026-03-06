@@ -7,6 +7,7 @@ import { Search, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ShaderBackground from '@/components/ui/shader-background';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 /* ─── Cinematic Text Reveal (from 21st.dev TextReveal) ─── */
 /* Pure CSS letter-by-letter blur reveal with cubic-bezier easing */
@@ -193,7 +194,7 @@ export function HeroSection({ agentCount }: HeroSectionProps) {
           >
             <div className="inline-flex items-baseline gap-3 px-6 py-3 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
               <span className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
-                {agentCount.toLocaleString()}+
+                <NumberTicker value={agentCount} />+
               </span>
               <span className="text-sm text-gray-500">registered agents</span>
             </div>

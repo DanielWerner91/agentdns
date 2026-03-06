@@ -4,6 +4,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { HeroSection } from '@/components/HeroSection';
 import { FeatureCards } from '@/components/FeatureCards';
+import { ProtocolMarquee } from '@/components/ProtocolMarquee';
 import { ArrowRight } from 'lucide-react';
 
 async function getAgentCount(): Promise<number> {
@@ -36,6 +37,9 @@ export default async function Home() {
         <section className="max-w-5xl mx-auto px-6 pb-20 -mt-8">
           <FeatureCards />
         </section>
+
+        {/* Protocol Marquee */}
+        <ProtocolMarquee />
 
         {/* API Preview */}
         <section className="max-w-5xl mx-auto px-6 pb-20">
